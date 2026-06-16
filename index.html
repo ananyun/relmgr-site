@@ -1,0 +1,2221 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人际关系管理</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f7f6f3; --surface: #fff;
+  --border: rgba(0,0,0,0.08); --border-md: rgba(0,0,0,0.15);
+  --text: #1a1a18; --text-2: #5c5c58; --text-3: #9a9a94;
+  --purple: #7F77DD; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE;
+  --coral: #D85A30; --coral-bg: #FAECE7;
+  --amber: #BA7517; --amber-bg: #FAEEDA;
+  --r: 10px; --r-sm: 6px;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); }
+
+/* SIDEBAR + TOPBAR LAYOUT */
+.app-layout { display: flex; min-height: 100vh; min-height: 100dvh; align-items: stretch; }
+.sidebar { width: 240px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100vh; height: 100dvh; position: sticky; top: 0; }
+.sidebar-hdr { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.sidebar-section { padding: 10px 10px; }
+.sb-nav-link { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: var(--r-sm); font-size: 14px; font-weight: 500; color: var(--text-2); cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
+.sb-nav-link:hover:not(.active) { background: var(--bg); }
+.sb-nav-link.active { background: var(--purple-bg); color: var(--purple); }
+.sb-group-hdr { display: flex; align-items: center; gap: 5px; padding: 8px 4px 6px; font-size: 11px; font-weight: 600; color: var(--text-3); cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
+.sb-person-row { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--r-sm); font-size: 13px; color: var(--text-2); cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
+.sb-person-row:hover:not(.active) { background: var(--bg); }
+.sb-person-row.active { background: var(--purple-bg); color: var(--purple); font-weight: 500; }
+.sb-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+.sb-add-btn { width: 100%; padding: 8px; margin-top: 4px; border: 1px dashed var(--border-md); border-radius: var(--r-sm); background: none; color: var(--text-3); font-size: 13px; cursor: pointer; }
+.sb-add-btn:hover { border-color: var(--purple); color: var(--purple); }
+.sb-tag-chip { font-size: 11px; padding: 3px 8px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border-md); color: var(--text-2); display: inline-flex; align-items: center; gap: 4px; cursor: default; }
+.sb-tag-chip button { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 12px; padding: 0; line-height: 1; }
+.sb-tag-chip button:hover { color: var(--coral); }
+
+.main-area { flex: 1; min-width: 0; }
+.topbar { display: none; align-items: center; height: 48px; padding: 0 6px 0 4px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 15; gap: 4px; }
+.sb-toggle { border: none; background: none; font-size: 20px; cursor: pointer; color: var(--text-2); width: 40px; height: 40px; flex-shrink: 0; }
+.topbar-title { font-weight: 600; font-size: 14px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 29; }
+
+@media (max-width: 880px) {
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 30; width: 82vw; max-width: 300px; transform: translateX(-100%); transition: transform .22s ease; box-shadow: 4px 0 20px rgba(0,0,0,.15); }
+  body.sidebar-open .sidebar { transform: translateX(0); }
+  body.sidebar-open .sidebar-backdrop { display: block; }
+  .topbar { display: flex; }
+}
+
+/* AVATARS */
+.av { border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; flex-shrink: 0; }
+.av-lg { width: 58px; height: 58px; font-size: 24px; border-radius: 16px; }
+.av-md { width: 38px; height: 38px; font-size: 16px; border-radius: 10px; }
+
+/* PAGES */
+.page { display: none; padding: 20px; max-width: 860px; margin: 0 auto; }
+.page.on { display: block; }
+
+/* TODAY */
+.t-date { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+.t-sub { font-size: 13px; color: var(--text-3); margin-bottom: 22px; }
+.sec-lbl { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 9px; }
+.t-sec { margin-bottom: 24px; }
+.t-rows { display: flex; flex-direction: column; gap: 7px; }
+.t-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 11px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.t-row:hover { border-color: #c5c0f0; }
+.t-row.faded { opacity: .55; }
+.tr-info { flex: 1; min-width: 0; }
+.tr-name { font-size: 14px; font-weight: 500; }
+.tr-status { font-size: 12px; color: var(--text-3); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-btn { padding: 5px 13px; font-size: 12px; font-weight: 500; border-radius: var(--r-sm); border: 1.5px solid var(--teal); color: var(--teal); background: none; cursor: pointer; flex-shrink: 0; }
+.tr-btn.done { background: var(--teal); color: #fff; }
+.quickcap-btn { width: 100%; padding: 14px 16px; font-size: 14px; font-weight: 500; border: 1.5px dashed #c5c0f0; border-radius: var(--r); background: var(--purple-bg); color: var(--purple); cursor: pointer; text-align: left; }
+.quickcap-btn:hover { border-style: solid; }
+.qc-mic-btn { padding: 9px 16px; font-size: 13px; font-weight: 500; border: 1.5px solid var(--purple); border-radius: 20px; background: var(--purple-bg); color: var(--purple); cursor: pointer; display: none; align-items: center; gap: 6px; margin-bottom: 10px; }
+.qc-mic-btn.listening { background: var(--coral); border-color: var(--coral); color: #fff; animation: qc-pulse 1.2s infinite; }
+@keyframes qc-pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+/* TODOS */
+.todo-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.todo-title-h { font-size: 20px; font-weight: 500; }
+.todo-list { display: flex; flex-direction: column; gap: 8px; }
+.todo-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; display: flex; align-items: flex-start; gap: 11px; }
+.todo-item.done-item { opacity: .45; }
+.todo-cb { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border-md); background: none; cursor: pointer; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: transparent; }
+.todo-cb.done { background: var(--teal); border-color: var(--teal); color: #fff; }
+.todo-body { flex: 1; }
+.todo-text { font-size: 14px; font-weight: 500; }
+.todo-item.done-item .todo-text { text-decoration: line-through; }
+.todo-meta { font-size: 12px; color: var(--text-3); margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
+.todo-person-tag { color: var(--purple); }
+.todo-date-tag { color: var(--amber); }
+.todo-date-tag.overdue { color: var(--coral); }
+.todo-del { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 18px; padding: 2px 4px; flex-shrink: 0; }
+.todo-del:hover { color: var(--coral); }
+.todo-cal-btn { padding: 3px 9px; font-size: 11px; border: 1px solid var(--purple); color: var(--purple); background: none; border-radius: var(--r-sm); cursor: pointer; flex-shrink: 0; }
+.done-divider { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; margin: 20px 0 10px; }
+
+/* ── PROFILE CARD ── */
+.profile-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 18px; }
+
+.pc-header { display: flex; align-items: flex-start; gap: 16px; padding: 20px 20px 16px; border-bottom: 1px solid var(--border); }
+.pc-meta { flex: 1; min-width: 0; }
+.p-name { font-size: 22px; font-weight: 600; letter-spacing: -.3px; }
+.p-status-line { font-size: 14px; color: var(--text-2); margin: 5px 0 9px; font-style: italic; line-height: 1.5; }
+.p-role { font-size: 13px; color: var(--text-3); margin-bottom: 9px; }
+.p-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.bw { background: var(--purple-bg); color: var(--purple); }
+.bf { background: var(--teal-bg); color: var(--teal); }
+.bfam { background: var(--coral-bg); color: var(--coral); }
+.bi { background: var(--amber-bg); color: var(--amber); }
+.pc-edit-btn { padding: 6px 13px; font-size: 13px; border: 1px solid var(--border-md); border-radius: var(--r-sm); background: none; color: var(--text-2); cursor: pointer; flex-shrink: 0; white-space: nowrap; }
+.pc-edit-btn:hover { border-color: var(--purple); color: var(--purple); }
+
+/* PROFILE SECTIONS */
+.pc-section { padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.pc-section:last-child { border-bottom: none; }
+.pc-sec-ttl { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; }
+
+/* TAGS */
+.tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tag-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 9px; border-radius: 20px; }
+.tag-chip.manual { background: var(--purple-bg); color: var(--purple); border: 1px solid #c5c0f0; }
+.tag-chip.auto { background: #f0f0f0; color: var(--text-2); border: 1px solid var(--border-md); }
+.tag-chip.auto::before { content: '✦'; font-size: 9px; opacity: .5; margin-right: 1px; }
+.tag-del { background: none; border: none; cursor: pointer; color: inherit; opacity: .5; font-size: 13px; padding: 0; line-height: 1; }
+.tag-del:hover { opacity: 1; }
+.tag-add-btn { font-size: 12px; padding: 3px 9px; border: 1px dashed var(--border-md); border-radius: 20px; background: none; color: var(--text-3); cursor: pointer; }
+.tag-add-btn:hover { border-color: var(--purple); color: var(--purple); }
+.tag-input-row { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+.tag-fi { padding: 5px 10px; border: 1px solid var(--border-md); border-radius: var(--r-sm); font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text); outline: none; width: 150px; }
+.tag-fi:focus { border-color: var(--purple); }
+.tag-ok { padding: 5px 12px; background: var(--purple); color: #fff; border: none; border-radius: var(--r-sm); font-size: 12px; cursor: pointer; }
+.tag-cancel { padding: 5px 10px; background: none; border: 1px solid var(--border-md); border-radius: var(--r-sm); font-size: 12px; cursor: pointer; color: var(--text-3); }
+
+/* BIO */
+.bio-view { font-size: 14px; color: var(--text); line-height: 1.7; cursor: pointer; padding: 6px 8px; border-radius: var(--r-sm); min-height: 32px; border: 1.5px solid transparent; }
+.bio-view:hover { border-color: var(--border-md); background: var(--bg); }
+.bio-view.empty { color: var(--text-3); font-style: italic; }
+.bio-edit-area { width: 100%; min-height: 80px; padding: 8px 10px; border: 1.5px solid var(--purple); border-radius: var(--r-sm); font-size: 14px; font-family: inherit; background: #fff; color: var(--text); resize: vertical; outline: none; line-height: 1.7; }
+.bio-btns { display: flex; gap: 7px; margin-top: 7px; }
+.bio-save { padding: 5px 14px; background: var(--purple); color: #fff; border: none; border-radius: var(--r-sm); font-size: 13px; cursor: pointer; }
+.bio-cancel { padding: 5px 12px; background: none; border: 1px solid var(--border-md); border-radius: var(--r-sm); font-size: 13px; cursor: pointer; color: var(--text-3); }
+
+/* STATS GRID */
+.pc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.pc-stat { text-align: center; background: var(--bg); border-radius: var(--r-sm); padding: 10px 8px; }
+.pc-stat-v { font-size: 18px; font-weight: 600; }
+.pc-stat-l { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.pc-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pc-info-item { background: var(--bg); border-radius: var(--r-sm); padding: 8px 11px; }
+.pc-info-lbl { font-size: 11px; color: var(--text-3); margin-bottom: 2px; }
+.pc-info-val { font-size: 13px; }
+
+/* STATS */
+.stat-bar-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.stat-bar-name { width: 84px; font-size: 13px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-bar-track { flex: 1; height: 18px; background: var(--bg); border-radius: 9px; overflow: hidden; }
+.stat-bar-fill { height: 100%; border-radius: 9px; transition: width .3s; min-width: 3px; }
+.stat-bar-val { width: 64px; text-align: right; font-size: 12px; color: var(--text-3); flex-shrink: 0; }
+.stat-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 420px; }
+.stat-table th { text-align: left; font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.stat-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.stat-table tr:last-child td { border-bottom: none; }
+
+/* PENDING TODOS STRIP */
+.pending-strip { background: #fffbf0; border-bottom: 1px solid var(--border); padding: 10px 20px; }
+.pending-strip-ttl { font-size: 11px; font-weight: 600; color: var(--amber); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+.pending-todo-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+.pending-todo-row:not(:last-child) { border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 2px; }
+.ptd-cb { width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--border-md); cursor: pointer; flex-shrink: 0; background: none; display: flex; align-items: center; justify-content: center; font-size: 9px; color: transparent; }
+.ptd-cb:hover { border-color: var(--teal); }
+.ptd-title { flex: 1; }
+.ptd-date { font-size: 11px; color: var(--text-3); flex-shrink: 0; }
+.ptd-cal { font-size: 11px; color: var(--purple); cursor: pointer; flex-shrink: 0; text-decoration: none; }
+
+/* INNER TABS */
+.inner-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+.it { padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text-3); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; }
+.it.active { color: var(--purple); border-bottom-color: var(--purple); }
+.inner-view { display: none; }
+.inner-view.on { display: block; }
+
+/* CALENDAR */
+.cal-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.cal-ttl { font-size: 15px; font-weight: 500; }
+.cal-arr { padding: 4px 10px; font-size: 15px; border: 1px solid var(--border-md); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
+.cal-wday { text-align: center; font-size: 11px; color: var(--text-3); padding: 4px 0; font-weight: 500; }
+.cal-day { background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; min-height: 44px; }
+.cal-day:hover:not(.dim) { border-color: #c5c0f0; background: var(--purple-bg); }
+.cal-day.dim { opacity: .18; pointer-events: none; }
+.cal-day.is-today { border-color: var(--purple); }
+.cal-day.checked { background: var(--teal); border-color: var(--teal); }
+.cal-day.checked:hover { background: #189060; }
+.d-num { font-size: 13px; font-weight: 500; color: var(--text-2); }
+.cal-day.is-today .d-num { color: var(--purple); font-weight: 700; }
+.cal-day.checked .d-num { color: #fff; }
+.d-chk { font-size: 10px; color: rgba(255,255,255,.8); }
+
+/* FEED */
+.feed-top { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.btn-log { padding: 7px 16px; font-size: 13px; font-weight: 500; background: var(--purple); color: #fff; border: none; border-radius: var(--r-sm); cursor: pointer; }
+.facts-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 16px; }
+.facts-ttl { font-size: 12px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+.fact-item { display: flex; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.fact-item:last-child { border-bottom: none; }
+.fact-date { color: var(--text-3); white-space: nowrap; flex-shrink: 0; }
+.fact-text { color: var(--text); }
+.int-entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 8px; }
+.int-hdr { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.int-date { font-size: 12px; color: var(--text-3); }
+.int-method { font-size: 11px; padding: 1px 7px; border-radius: 20px; background: var(--bg); color: var(--text-2); border: 1px solid var(--border-md); }
+.int-dur { font-size: 11px; color: var(--teal); }
+.int-notes { font-size: 14px; color: var(--text); line-height: 1.5; }
+.int-learned { font-size: 12px; color: var(--purple); margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border); }
+.empty-msg { font-size: 14px; color: var(--text-3); text-align: center; padding: 20px 0; }
+
+/* MODALS */
+.ov { position: fixed; inset: 0; background: rgba(0,0,0,.32); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+.ov.on { display: flex; }
+.modal { background: var(--surface); border-radius: 14px; padding: 24px; width: 100%; max-width: 460px; max-height: 85vh; max-height: 85dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.m-ttl { font-size: 17px; font-weight: 500; margin-bottom: 18px; }
+.m-sub { font-size: 13px; color: var(--text-2); margin-bottom: 16px; line-height: 1.5; }
+.fg { margin-bottom: 13px; }
+.flbl { font-size: 13px; font-weight: 500; color: var(--text-2); display: block; margin-bottom: 5px; }
+.fi { width: 100%; padding: 8px 11px; border: 1px solid var(--border-md); border-radius: var(--r-sm); font-size: 14px; font-family: inherit; background: #fafaf8; color: var(--text); outline: none; }
+.fi:focus { border-color: var(--purple); background: #fff; }
+textarea.fi { resize: vertical; min-height: 68px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* COLOR PICKER */
+.color-swatches { display: flex; gap: 8px; }
+.cs { width: 48px; height: 48px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; border: 3px solid transparent; transition: border-color .12s, transform .1s; flex-direction: column; gap: 2px; }
+.cs:hover { transform: scale(1.06); }
+.cs.active { border-color: var(--purple); box-shadow: 0 0 0 2px var(--purple-bg); }
+.cs-lbl { font-size: 9px; color: rgba(255,255,255,.85); font-weight: 500; }
+
+/* SEG */
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.so { flex: 1; min-width: 60px; padding: 7px 4px; text-align: center; font-size: 12px; font-weight: 500; border: 1px solid var(--border-md); border-radius: var(--r-sm); cursor: pointer; color: var(--text-2); }
+.so.sel-work { background: var(--purple-bg); border-color: var(--purple); color: var(--purple); }
+.so.sel-friend { background: var(--teal-bg); border-color: var(--teal); color: var(--teal); }
+.so.sel-family { background: var(--coral-bg); border-color: var(--coral); color: var(--coral); }
+.so.sel-1 { background: var(--amber-bg); border-color: var(--amber); color: var(--amber); }
+.so.sel-2 { background: #fff8e8; border-color: #d4a840; color: #a07020; }
+.so.sel-3 { background: #f4f4f0; border-color: #bbb; color: #666; }
+.so.sel { background: var(--purple-bg); border-color: var(--purple); color: var(--purple); }
+
+.mfoot { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+.mbtn { padding: 8px 16px; border: 1px solid var(--border-md); border-radius: var(--r-sm); background: none; color: var(--text-2); cursor: pointer; font-size: 13px; font-family: inherit; }
+.mbtn-s { padding: 8px 18px; background: var(--purple); color: #fff; border: none; border-radius: var(--r-sm); cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; }
+.mbtn-o { padding: 8px 14px; background: none; color: var(--teal); border: 1px solid var(--teal); border-radius: var(--r-sm); cursor: pointer; font-size: 13px; font-family: inherit; }
+.mbtn-del { padding: 8px 14px; background: none; color: var(--coral); border: 1px solid var(--coral); border-radius: var(--r-sm); cursor: pointer; font-size: 13px; margin-right: auto; font-family: inherit; }
+.hint { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+.detected-box { background: var(--amber-bg); border: 1px solid #d4a840; border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 14px; font-size: 13px; color: #6b4a0a; line-height: 1.5; }
+.detected-box strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--amber); margin-bottom: 4px; }
+
+/* ORG MANAGER */
+.og-group { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.og-group-hdr { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: var(--bg); }
+.og-group-name { flex: 1; font-size: 13px; font-weight: 600; }
+.og-iconbtn { width: 24px; height: 24px; border: 1px solid var(--border-md); border-radius: 6px; background: var(--surface); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; color: var(--text-2); flex-shrink: 0; }
+.og-iconbtn:hover { border-color: var(--purple); color: var(--purple); }
+.og-iconbtn.danger:hover { border-color: var(--coral); color: var(--coral); }
+.og-person-row { display: flex; align-items: center; gap: 7px; padding: 7px 10px; font-size: 13px; border-top: 1px solid var(--border); }
+.og-person-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.og-sel { font-size: 11px; padding: 3px 6px; border: 1px solid var(--border-md); border-radius: 6px; background: var(--surface); color: var(--text-2); }
+.og-empty { font-size: 12px; color: var(--text-3); padding: 10px; text-align: center; }
+.og-drag-handle { cursor: grab; touch-action: none; color: var(--text-3); font-size: 15px; padding: 0 4px; flex-shrink: 0; user-select: none; }
+.og-drag-handle:active { cursor: grabbing; }
+.og-drag-row.og-dragging { z-index: 50; position: relative; box-shadow: 0 6px 16px rgba(0,0,0,.18); background: var(--surface); border-radius: var(--r-sm); }
+</style>
+</head>
+<body>
+
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-hdr">
+      <strong style="font-size:14px">人际关系</strong>
+      <button id="srv-badge" onclick="openSettings()" style="font-size:11px;padding:3px 8px;border-radius:20px;border:1px solid var(--border-md);background:none;color:var(--text-3);white-space:nowrap;cursor:pointer">📱 本地</button>
+    </div>
+    <div class="sidebar-section" style="border-bottom:1px solid var(--border)">
+      <button class="sb-nav-link active" id="tab-today" onclick="gotoToday()">🏠 今日</button>
+      <button class="sb-nav-link" id="tab-todos" onclick="gotoTodos()">📋 待办</button>
+      <button class="sb-nav-link" id="tab-stats" onclick="gotoStats()">📊 统计</button>
+    </div>
+    <div class="sidebar-section" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 6px">
+        <span style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em">人物</span>
+        <button class="og-iconbtn" onclick="openOrgManager()" title="管理分组与排序">☰</button>
+      </div>
+      <div id="sidebar-people"></div>
+      <button class="sb-add-btn" onclick="openPersonForm(null)">+ 添加人物</button>
+    </div>
+    <div class="sidebar-section" id="sidebar-tags-section" style="border-top:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏷 标签管理</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input class="fi" id="sb-tag-input" placeholder="新标签..." style="font-size:12px;padding:6px 9px" onkeydown="if(event.key==='Enter'){event.preventDefault();addLibraryTag();}">
+        <button class="og-iconbtn" style="width:auto;padding:0 10px" onclick="addLibraryTag()">+</button>
+      </div>
+      <div id="sidebar-tag-list" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+    </div>
+  </aside>
+  <div class="main-area">
+    <div class="topbar">
+      <button class="sb-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbar-title">今日</div>
+    </div>
+
+<!-- TODAY PAGE -->
+<div class="page on" id="pg-today">
+  <div class="t-date" id="hdr-date"></div>
+  <div class="t-sub" id="hdr-sub"></div>
+  <div class="t-sec">
+    <button class="quickcap-btn" onclick="openQuickCapture()">🎙️ 快速记录 — 说一句话，自动识别人物 / 内容 / 待办</button>
+  </div>
+  <div class="t-sec" id="sec-done" style="display:none">
+    <div class="sec-lbl">今日已联系</div>
+    <div class="t-rows" id="rows-done"></div>
+  </div>
+  <div class="t-sec" id="sec-pend">
+    <div class="sec-lbl">待联系</div>
+    <div class="t-rows" id="rows-pend"></div>
+  </div>
+  <div class="t-sec" id="sec-week-done">
+    <div class="sec-lbl">本周已联系</div>
+    <div class="t-rows" id="rows-week-done"></div>
+  </div>
+  <div class="t-sec" id="sec-week-pend">
+    <div class="sec-lbl">本周未联系</div>
+    <div class="t-rows" id="rows-week-pend"></div>
+  </div>
+</div>
+
+<!-- TODOS PAGE -->
+<div class="page" id="pg-todos">
+  <div class="todo-toolbar">
+    <div class="todo-title-h">待办事项</div>
+    <button class="mbtn-s" onclick="openTodoForm(null)" style="padding:7px 14px">+ 新增</button>
+  </div>
+  <div id="todo-list"></div>
+</div>
+
+<!-- STATS PAGE -->
+<div class="page" id="pg-stats">
+  <div class="todo-title-h" style="margin-bottom:14px">统计</div>
+  <div class="seg" id="seg-stat-period" style="margin-bottom:6px">
+    <div class="so" data-v="day">今日</div>
+    <div class="so" data-v="week">本周</div>
+    <div class="so" data-v="month">本月</div>
+  </div>
+  <div id="stat-summary" class="pc-stats" style="margin:16px 0"></div>
+  <div class="sec-lbl">联系次数对比</div>
+  <div id="stat-chart-count" style="margin-bottom:22px"></div>
+  <div class="sec-lbl">互动时长对比（分钟）</div>
+  <div id="stat-chart-duration" style="margin-bottom:22px"></div>
+  <div class="sec-lbl">详细数据</div>
+  <div style="overflow-x:auto"><table class="stat-table" id="stat-table"></table></div>
+</div>
+
+  </div><!-- /main-area -->
+</div><!-- /app-layout -->
+
+<datalist id="tag-datalist"></datalist>
+
+<!-- MODAL: ADD/EDIT PERSON -->
+<div class="ov" id="ov-person">
+  <div class="modal">
+    <div class="m-ttl" id="pf-ttl">添加人物</div>
+    <div class="fg">
+      <div class="flbl">状态颜色</div>
+      <div class="color-swatches" id="color-swatches">
+        <div class="cs" data-c="gray"  style="background:#8E8E8E"><span class="cs-lbl">普通</span></div>
+        <div class="cs" data-c="green" style="background:#1D9E75"><span class="cs-lbl">良好</span></div>
+        <div class="cs" data-c="orange" style="background:#E07028"><span class="cs-lbl">待跟进</span></div>
+        <div class="cs" data-c="black" style="background:#1A1A18"><span class="cs-lbl">敌对</span></div>
+      </div>
+      <div class="hint" style="margin-top:6px">有未完成待办时自动显示橙色</div>
+    </div>
+    <div class="fg">
+      <label class="flbl">一句话状态</label>
+      <input class="fi" id="pf-status" placeholder="如：需要定期维护、最近有合作机会...">
+    </div>
+    <div class="row2">
+      <div class="fg"><label class="flbl">姓名 *</label><input class="fi" id="pf-name" placeholder="名字"></div>
+      <div class="fg"><label class="flbl">职位 / 关系</label><input class="fi" id="pf-role" placeholder="如：导师、同事"></div>
+    </div>
+    <div class="fg">
+      <div class="flbl">类型</div>
+      <div class="seg" id="seg-type">
+        <div class="so" data-v="work">💼 工作</div>
+        <div class="so" data-v="friend">🎉 玩伴</div>
+        <div class="so" data-v="family">🏠 家人</div>
+      </div>
+    </div>
+    <div class="fg">
+      <div class="flbl">重要程度</div>
+      <div class="seg" id="seg-imp">
+        <div class="so" data-v="1">⭐⭐⭐ 核心</div>
+        <div class="so" data-v="2">⭐⭐ 重要</div>
+        <div class="so" data-v="3">⭐ 普通</div>
+      </div>
+    </div>
+    <div class="fg"><label class="flbl">联系方式</label><input class="fi" id="pf-contact" placeholder="邮件 / 电话 / 微信"></div>
+    <div class="row2">
+      <div class="fg"><label class="flbl">来自哪里</label><input class="fi" id="pf-hometown" placeholder="如：北京"></div>
+      <div class="fg"><label class="flbl">生日</label><input class="fi" id="pf-birthday" placeholder="如：3月15日"></div>
+    </div>
+    <div class="fg"><label class="flbl">备注</label><textarea class="fi" id="pf-notes" placeholder="初始信息、背景..."></textarea></div>
+    <div class="mfoot">
+      <button class="mbtn-del" id="pf-del" onclick="deletePerson()" style="display:none">删除</button>
+      <button class="mbtn" onclick="closeOv('ov-person')">取消</button>
+      <button class="mbtn-s" onclick="savePerson()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: LOG INTERACTION -->
+<div class="ov" id="ov-log">
+  <div class="modal">
+    <div class="m-ttl" id="log-ttl">记录互动</div>
+    <div class="row2">
+      <div class="fg"><label class="flbl">日期</label><input class="fi" id="log-date" type="date"></div>
+      <div class="fg"><label class="flbl">时长（分钟）</label><input class="fi" id="log-dur" type="number" min="1" placeholder="如：30"></div>
+    </div>
+    <div class="fg">
+      <div class="flbl">方式</div>
+      <div class="seg" id="seg-method">
+        <div class="so" data-v="见面">🤝 见面</div>
+        <div class="so" data-v="电话">📞 电话</div>
+        <div class="so" data-v="视频">📹 视频</div>
+        <div class="so" data-v="消息">💬 消息</div>
+        <div class="so" data-v="其他">• 其他</div>
+      </div>
+    </div>
+    <div class="fg"><label class="flbl">聊了什么 / 做了什么</label><textarea class="fi" id="log-notes" placeholder="这次互动的内容..."></textarea></div>
+    <div class="fg">
+      <label class="flbl">了解到的新信息</label>
+      <textarea class="fi" id="log-learned" placeholder="关于这个人的新发现..."></textarea>
+      <div class="hint">→ 自动更新到此人档案</div>
+    </div>
+    <div class="fg">
+      <label class="flbl">需要跟进 / 待办</label>
+      <textarea class="fi" id="log-followup" placeholder="下次要做什么、需要记得什么..."></textarea>
+      <div class="hint">→ 保存后自动弹出创建提醒</div>
+    </div>
+    <div class="mfoot">
+      <button class="mbtn" onclick="closeOv('ov-log')">取消</button>
+      <button class="mbtn-s" onclick="saveLog()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: FOLLOW-UP DETECTED -->
+<div class="ov" id="ov-followup">
+  <div class="modal" style="max-width:440px">
+    <div class="m-ttl">📌 检测到待办事项</div>
+    <div class="m-sub">识别到需要跟进的内容，要创建提醒吗？</div>
+    <div class="detected-box"><strong>识别内容</strong><span id="fu-detected-text"></span></div>
+    <div class="fg"><label class="flbl">待办标题</label><input class="fi" id="fu-title"></div>
+    <div class="row2">
+      <div class="fg"><label class="flbl">提醒日期</label><input class="fi" id="fu-date" type="date"></div>
+      <div class="fg"><label class="flbl">提醒时间 <span style="font-size:11px;color:var(--text-3);font-weight:400">（不填=全天，不提醒）</span></label><input class="fi" id="fu-time" type="time" placeholder="可选"></div>
+    </div>
+    <div class="fg"><label class="flbl">备注</label><input class="fi" id="fu-note" placeholder="可选"></div>
+    <div class="mfoot">
+      <button class="mbtn" onclick="closeOv('ov-followup')">跳过</button>
+      <button class="mbtn-s" onclick="saveFollowup(false)">仅创建待办</button>
+      <button class="mbtn-o" onclick="saveFollowup(true)">+ 添加到日历</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD/EDIT TODO -->
+<div class="ov" id="ov-todo">
+  <div class="modal" style="max-width:440px">
+    <div class="m-ttl" id="todo-modal-ttl">新增待办</div>
+    <div class="fg"><label class="flbl">事项 *</label><input class="fi" id="td-title" placeholder="要做什么"></div>
+    <div class="row2">
+      <div class="fg"><label class="flbl">日期</label><input class="fi" id="td-date" type="date"></div>
+      <div class="fg"><label class="flbl">时间</label><input class="fi" id="td-time" type="time" value="09:00"></div>
+    </div>
+    <div class="fg"><label class="flbl">关联人物</label><select class="fi" id="td-person"><option value="">— 不关联 —</option></select></div>
+    <div class="fg"><label class="flbl">备注</label><textarea class="fi" id="td-note" placeholder="可选..."></textarea></div>
+    <div class="mfoot">
+      <button class="mbtn-del" id="td-del" onclick="deleteTodo()" style="display:none">删除</button>
+      <button class="mbtn" onclick="closeOv('ov-todo')">取消</button>
+      <button class="mbtn-o" id="td-outlook-btn" onclick="todoToOutlook()" style="display:none">📅 添加到日历</button>
+      <button class="mbtn-s" onclick="saveTodo()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: QUICK CAPTURE (voice / smart text) -->
+<div class="ov" id="ov-quickcap">
+  <div class="modal" style="max-width:480px">
+    <div class="m-ttl">🎙️ 快速记录</div>
+    <p class="m-sub">说一段话或打字，比如："今天跟悦莹梁聊了升职的事，她下周要做决定，记得跟进一下"<br>
+      <span style="color:var(--text-3)">手机上可以点击输入框后用键盘上的麦克风图标直接口述</span></p>
+    <button class="qc-mic-btn" id="qc-mic-btn" onclick="qcToggleMic()">🎤 按这里开始说话</button>
+    <div class="fg">
+      <textarea class="fi" id="qc-text" placeholder="点这里说话或打字…" style="min-height:120px" oninput="qcAutoParse()"></textarea>
+    </div>
+    <div class="fg" id="qc-ai-row" style="display:none;margin-top:-6px">
+      <button class="qc-mic-btn" id="qc-ai-btn" style="display:inline-flex;border-color:var(--purple);color:var(--purple);background:var(--purple-bg)" onclick="qcAIParse()">✨ AI 智能解析（更准确，按次计费）</button>
+      <div id="qc-ai-status" style="font-size:12px;color:var(--text-3);margin-top:4px"></div>
+    </div>
+    <div class="fg" id="qc-preview" style="display:none">
+      <div class="detected-box" style="background:var(--purple-bg);border-color:#c5c0f0">
+        <strong style="color:var(--purple)">识别结果（可修改）</strong>
+        <div class="seg" id="qc-mode-seg" style="margin-top:8px">
+          <div class="so" data-v="event">🗓 互动事件</div>
+          <div class="so" data-v="update">📝 只更新资料</div>
+        </div>
+        <div class="row2" style="margin-top:8px">
+          <div><label class="flbl">人物</label><select class="fi" id="qc-person" onchange="qcPersonChange()"></select></div>
+          <div id="qc-date-col"><label class="flbl">日期</label><input class="fi" id="qc-date" type="date"></div>
+        </div>
+        <div class="fg" id="qc-newname-row" style="display:none;margin-top:8px;margin-bottom:0">
+          <label class="flbl">新人物姓名</label>
+          <input class="fi" id="qc-newname" placeholder="确认或修改姓名">
+        </div>
+        <div class="row2" id="qc-basicinfo-row" style="display:none;margin-top:8px">
+          <div class="fg" id="qc-hometown-row" style="display:none;margin-bottom:0">
+            <label class="flbl">识别到来自哪里</label>
+            <input class="fi" id="qc-hometown" placeholder="来自哪里">
+          </div>
+          <div class="fg" id="qc-birthday-row" style="display:none;margin-bottom:0">
+            <label class="flbl">识别到生日</label>
+            <input class="fi" id="qc-birthday" placeholder="如：3月15日">
+          </div>
+        </div>
+        <div id="qc-facts-preview" style="display:none;margin-top:8px">
+          <label class="flbl">将作为资料笔记保存（不计入互动次数）</label>
+          <ul id="qc-facts-list" style="margin:4px 0 0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--text)"></ul>
+        </div>
+        <div id="qc-todo-hint" style="margin-top:8px;font-size:12px;color:#6b4a0a"></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="mbtn" onclick="closeOv('ov-quickcap')">取消</button>
+      <button class="mbtn-s" onclick="qcConfirm()">识别并保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: GROUPS & ORDER -->
+<div class="ov" id="ov-org">
+  <div class="modal" style="max-width:480px">
+    <div class="m-ttl">☰ 分组与排序</div>
+    <div class="fg" style="display:flex;gap:8px">
+      <input class="fi" id="og-new-group" placeholder="新分组名称，如：工作伙伴" style="flex:1">
+      <button class="mbtn-s" style="white-space:nowrap" onclick="addGroup()">+ 新建分组</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:4px">
+      <button class="mbtn" style="font-size:12px;padding:5px 11px" onclick="expandAllGroups()">导航栏全部展开</button>
+      <button class="mbtn" style="font-size:12px;padding:5px 11px" onclick="collapseAllGroups()">导航栏全部折叠</button>
+      <span class="hint" style="align-self:center">点导航栏的分组名也能单独折叠/展开</span>
+    </div>
+    <div id="org-list" style="margin-top:6px;display:flex;flex-direction:column;gap:14px"></div>
+    <div class="mfoot">
+      <button class="mbtn" onclick="closeOv('ov-org')">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SETTINGS / CLOUD SYNC -->
+<div class="ov" id="ov-settings">
+  <div class="modal" style="max-width:460px">
+    <div class="m-ttl">☁️ 云同步设置</div>
+    <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:16px">
+      使用 <strong>JSONBin.io</strong> 免费云存储，手机和电脑共享同一份数据。<br>
+      <span style="color:var(--text-3)">注册免费，无需信用卡，个人使用完全够用。</span>
+    </p>
+    <div style="background:var(--bg);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;font-size:13px;line-height:1.9;color:var(--text-2)">
+      <b style="display:block;margin-bottom:4px;color:var(--text)">三步配置：</b>
+      1. 打开 <span style="color:var(--purple);font-weight:500">jsonbin.io</span> → 免费注册<br>
+      2. 点 <b>New Bin</b> → 内容不用改，直接 <b>Create Bin</b><br>
+         页面 URL 里复制 Bin ID（64位字母数字）<br>
+      3. 右上角头像 → <b>API Keys</b> → 复制 <b>Master Key</b>
+    </div>
+    <div class="fg">
+      <label class="flbl">Bin ID</label>
+      <input class="fi" id="cfg-binid" placeholder="如：6849abcdef1234567890abcd" style="font-family:monospace">
+    </div>
+    <div class="fg">
+      <label class="flbl">Master Key</label>
+      <input class="fi" id="cfg-apikey" placeholder="$2a$10$..." type="password" style="font-family:monospace">
+      <div class="hint">仅存在本设备，不会上传到任何地方</div>
+    </div>
+    <div id="cfg-status" style="font-size:13px;min-height:20px;margin-bottom:4px"></div>
+    <div class="mfoot">
+      <button class="mbtn-del" id="cfg-clear-btn" onclick="clearCloud()" style="display:none">清除配置</button>
+      <button class="mbtn" onclick="closeOv('ov-settings')">取消</button>
+      <button class="mbtn-o" onclick="testCloud()">测试连接</button>
+      <button class="mbtn-s" onclick="saveCloudConfig()">保存并同步</button>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:22px 0 18px">
+
+    <div class="m-ttl" style="font-size:15px">✨ AI 智能解析（可选）</div>
+    <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:14px">
+      用 Claude API 更准确地解析口语化语音/文字，能处理口头更正、模糊连词等。<br>
+      <span style="color:var(--text-3)">按次计费，不用不花钱，可在 Anthropic 后台设消费上限或随时删除 Key 停用。</span>
+    </p>
+    <div class="fg">
+      <label class="flbl">Anthropic API Key</label>
+      <input class="fi" id="cfg-claudekey" placeholder="sk-ant-..." type="password" style="font-family:monospace">
+      <div class="hint">仅存在本设备本地，不会同步到云端</div>
+    </div>
+    <div id="cfg-claude-status" style="font-size:13px;min-height:20px;margin-bottom:4px"></div>
+    <div class="mfoot">
+      <button class="mbtn-del" id="cfg-claude-clear-btn" onclick="clearClaudeKey()" style="display:none">清除 Key</button>
+      <button class="mbtn-o" onclick="testClaudeKey()">测试连接</button>
+      <button class="mbtn-s" onclick="saveClaudeKey()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DAY DETAIL -->
+<div class="ov" id="ov-day">
+  <div class="modal" style="max-width:400px">
+    <div class="m-ttl" id="day-ttl"></div>
+    <div id="day-info" style="margin:8px 0 16px;font-size:14px;color:var(--text-2);line-height:1.6"></div>
+    <div class="mfoot" style="margin-top:0">
+      <button class="mbtn-del" style="margin-right:auto" onclick="dayUncheck()">取消打卡</button>
+      <button class="mbtn" onclick="closeOv('ov-day')">关闭</button>
+      <button class="mbtn-s" onclick="dayAddLog()">补充细节</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────────
+const PALETTE = {
+  gray:   { bg:'#8E8E8E', label:'普通' },
+  green:  { bg:'#1D9E75', label:'良好' },
+  orange: { bg:'#E07028', label:'待跟进' },
+  black:  { bg:'#1A1A18', label:'敌对' },
+};
+const TL = { work:'工作', friend:'玩伴', family:'家人' };
+const TB = { work:'bw', friend:'bf', family:'bfam' };
+const IL = { 1:'⭐⭐⭐ 核心', 2:'⭐⭐ 重要', 3:'⭐ 普通' };
+const FOLLOWUP_RE = /下次|后续|跟进|记得|提醒|待办|需要.*做|要.*联系|follow.?up|todo|之后|改天|下回|约好/i;
+
+const TRAIT_RULES = [
+  { label:'幽默感',   re:/幽默|搞笑|很逗|开玩笑|好笑/i },
+  { label:'内向',     re:/内向|安静|话少|不爱说话|害羞/i },
+  { label:'外向',     re:/外向|活泼|健谈|开朗|热情|爱说话/i },
+  { label:'细心',     re:/细心|认真|仔细|注意细节|很认真/i },
+  { label:'粗心',     re:/粗心|马虎|不注意|健忘/i },
+  { label:'工作狂',   re:/工作狂|加班|很忙|拼命|埋头工作/i },
+  { label:'有野心',   re:/野心|目标感|上进|很拼|要强/i },
+  { label:'体贴',     re:/体贴|贴心|关心|照顾|周到/i },
+  { label:'敏感',     re:/敏感|在意|情绪|脆弱|容易受伤/i },
+  { label:'乐观',     re:/乐观|积极|正能量|阳光|开心/i },
+  { label:'悲观',     re:/悲观|消极|负能量|抱怨|不开心/i },
+  { label:'理性',     re:/理性|逻辑|冷静|分析|客观/i },
+  { label:'感性',     re:/感性|情绪化|凭感觉|直觉/i },
+  { label:'领导力',   re:/领导|管理|决策|掌控|带团队/i },
+  { label:'创意',     re:/创意|创新|想象力|点子多|脑洞/i },
+  { label:'社交牛人', re:/认识很多人|人脉广|朋友多|社交达人/i },
+  { label:'直接',     re:/直接|不拐弯|说话直|坦率|直白/i },
+  { label:'谨慎',     re:/谨慎|小心|保守|不轻易|慎重/i },
+  { label:'完美主义', re:/完美主义|要求高|严格|完美/i },
+  { label:'随和',     re:/随和|好相处|不挑|好说话|包容/i },
+  { label:'固执',     re:/固执|坚持己见|不听|倔强/i },
+  { label:'慷慨',     re:/慷慨|大方|请客|不计较/i },
+  { label:'节俭',     re:/节俭|省钱|抠|不舍得/i },
+  { label:'独立',     re:/独立|自主|不依赖|自己搞定/i },
+];
+
+// ── DATA ──────────────────────────────────────────────────
+let db = { people:[], interactions:[], todos:[] };
+let saveTimer = null;
+
+// Cloud config (stored in localStorage, NOT the data)
+function getCloudCfg() {
+  try { return JSON.parse(localStorage.getItem('relmgr_cloud') || 'null'); } catch(e) { return null; }
+}
+function setCloudCfg(cfg) {
+  localStorage.setItem('relmgr_cloud', JSON.stringify(cfg));
+}
+
+function cloudHeaders(key, withMeta) {
+  const h = { 'Content-Type': 'application/json', 'X-Master-Key': key };
+  if (!withMeta) h['X-Bin-Meta'] = 'false';
+  return h;
+}
+function cloudUrl(binId) {
+  return `https://api.jsonbin.io/v3/b/${binId}/latest`;
+}
+function cloudPutUrl(binId) {
+  return `https://api.jsonbin.io/v3/b/${binId}`;
+}
+function fetchWithTimeout(url, opts, ms = 8000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
+function normDB() {
+  if (!db.people) db.people = [];
+  if (!db.interactions) db.interactions = [];
+  if (!db.todos) db.todos = [];
+  if (!db.groups) db.groups = [];
+  if (!db.tagLibrary) db.tagLibrary = [];
+  let maxOrder = db.people.reduce((m,p)=>Math.max(m, p.order||0), 0);
+  db.people.forEach(p => {
+    if (!p.facts) p.facts = [];
+    if (!p.color) p.color = 'gray';
+    if (!p.tags) p.tags = [];
+    if (!p.bio) p.bio = '';
+    if (p.emoji) delete p.emoji;
+    if (p.groupId === undefined) p.groupId = null;
+    if (p.order === undefined || p.order === null) p.order = ++maxOrder;
+    if (p.hometown === undefined) p.hometown = '';
+    if (p.birthday === undefined) p.birthday = '';
+  });
+  const usedTags = new Set(db.tagLibrary);
+  db.people.forEach(p => (p.tags||[]).forEach(t => usedTags.add(t)));
+  db.tagLibrary = [...usedTags];
+}
+
+async function load() {
+  const cfg = getCloudCfg();
+  if (cfg && cfg.binId && cfg.apiKey) {
+    try {
+      const r = await fetchWithTimeout(cloudUrl(cfg.binId), { headers: cloudHeaders(cfg.apiKey) });
+      if (r.ok) {
+        const json = await r.json();
+        const record = json.record || json;
+        if (record && (record.people || record.interactions || record.todos)) {
+          db = record; normDB(); setBadge('cloud'); return;
+        }
+      }
+    } catch(e) {}
+    setBadge('error');
+  } else {
+    setBadge('local');
+  }
+  // Fallback: localStorage
+  try { const r = localStorage.getItem('relmgr'); if (r) db = JSON.parse(r); } catch(e) {}
+  normDB();
+}
+
+function save() {
+  try { localStorage.setItem('relmgr', JSON.stringify(db)); } catch(e) {}
+  const cfg = getCloudCfg();
+  if (!cfg || !cfg.binId || !cfg.apiKey) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      const r = await fetchWithTimeout(cloudPutUrl(cfg.binId), {
+        method: 'PUT',
+        headers: cloudHeaders(cfg.apiKey),
+        body: JSON.stringify(db)
+      });
+      setBadge(r.ok ? 'cloud' : 'error');
+    } catch(e) { setBadge('error'); }
+  }, 600);
+}
+
+function setBadge(state) {
+  const b = document.getElementById('srv-badge');
+  if (!b) return;
+  const map = {
+    cloud: ['☁️ 已同步', 'var(--teal)'],
+    error: ['⚠️ 同步失败', 'var(--coral)'],
+    local: ['📱 本地', 'var(--text-3)'],
+  };
+  const [txt, col] = map[state] || map.local;
+  b.textContent = txt; b.style.color = col;
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────
+function openSettings() {
+  const cfg = getCloudCfg() || {};
+  document.getElementById('cfg-binid').value = cfg.binId || '';
+  document.getElementById('cfg-apikey').value = cfg.apiKey || '';
+  document.getElementById('cfg-status').textContent = '';
+  document.getElementById('cfg-clear-btn').style.display = cfg.binId ? 'inline-block' : 'none';
+  const ck = getClaudeKey();
+  document.getElementById('cfg-claudekey').value = ck || '';
+  document.getElementById('cfg-claude-status').textContent = '';
+  document.getElementById('cfg-claude-clear-btn').style.display = ck ? 'inline-block' : 'none';
+  openOv('ov-settings');
+}
+
+// ── CLAUDE API KEY (local only, opt-in AI parsing) ──────────────
+function getClaudeKey() { return localStorage.getItem('relmgr_claude_key') || ''; }
+function setClaudeKey(k) { if (k) localStorage.setItem('relmgr_claude_key', k); else localStorage.removeItem('relmgr_claude_key'); }
+async function testClaudeKey() {
+  const key = document.getElementById('cfg-claudekey').value.trim();
+  const st = document.getElementById('cfg-claude-status');
+  if (!key) { st.textContent = '⚠️ 请填写 API Key'; st.style.color = 'var(--amber)'; return; }
+  st.textContent = '连接中…'; st.style.color = 'var(--text-3)';
+  try {
+    const r = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+      body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:8, messages:[{role:'user',content:'hi'}] })
+    }, 12000);
+    if (r.ok) { st.textContent = '✅ 连接成功！'; st.style.color = 'var(--teal)'; }
+    else { const err = await r.json().catch(()=>({})); st.textContent = `❌ 失败 (${r.status})：${err.error?.message||'检查 Key 是否正确'}`; st.style.color = 'var(--coral)'; }
+  } catch(e) { st.textContent = '❌ 网络错误：' + e.message; st.style.color = 'var(--coral)'; }
+}
+function saveClaudeKey() {
+  const key = document.getElementById('cfg-claudekey').value.trim();
+  setClaudeKey(key);
+  const st = document.getElementById('cfg-claude-status');
+  st.textContent = key ? '✅ 已保存' : '已清除';
+  st.style.color = 'var(--teal)';
+  document.getElementById('cfg-claude-clear-btn').style.display = key ? 'inline-block' : 'none';
+}
+function clearClaudeKey() {
+  if (!confirm('清除 AI 解析的 API Key？')) return;
+  setClaudeKey('');
+  document.getElementById('cfg-claudekey').value = '';
+  document.getElementById('cfg-claude-clear-btn').style.display = 'none';
+  document.getElementById('cfg-claude-status').textContent = '已清除';
+}
+
+const CLAUDE_EXTRACT_TOOL = {
+  name: 'extract_entry',
+  description: '从一段口语化的人际关系记录中提取结构化信息',
+  input_schema: {
+    type: 'object',
+    properties: {
+      corrected_text: { type:'string', description:'将口头更正（如"不对，应该是…"、"我是说…"）解析后只保留最终正确意思、去掉填充词的干净版本文本，保留所有事实信息' },
+      person_name: { type:'string', description:'被讨论的人物姓名。语音转文字经常把人名识别错：中文名容易变成同音字（比如"阴越"被听成"音乐"、"姜泽城"被听成"讲这成"），英文/英文译名也容易被听写成发音相近的中文或别的拼写（比如"Eason"被听成"伊森"或"一生"、"Ethan"被听成"伊森"或"以三"）。请判断转录文本里提到的名字在发音上是否接近已知人物列表里的某一个（不管中文还是英文名），如果接近，直接返回已知列表里那个正确的名字，而不是转录出来的错别字/错误拼写。只有确实不属于任何已知人物、像是一个新人时，才原样返回转录文字。没有提到人物就空字符串。' },
+      is_interaction_event: { type:'boolean', description:'true=描述了一次真实发生的互动（见面/聊天/电话/吃饭等），false=只是在补充这个人的背景资料，没有具体互动事件' },
+      date_hint: { type:'string', description:'这段内容对应的日期，格式YYYY-MM-DD，根据"今天/昨天/前天"等相对词解析，不确定就用今天' },
+      facts: { type:'array', items:{type:'string'}, description:'如果is_interaction_event为false，列出关于这个人的几条独立事实要点（已清理、去重）；为true则给空数组' },
+      hometown: { type:'string', description:'提到的籍贯/老家，没有就空字符串' },
+      birthday: { type:'string', description:'提到的生日，格式如"3月15日"或"1995年3月15日"，没有就空字符串' },
+      followup_text: { type:'string', description:'提到的需要跟进/提醒的事项，简短一句话，没有就空字符串' }
+    },
+    required: ['corrected_text','person_name','is_interaction_event','date_hint','facts','hometown','birthday','followup_text']
+  }
+};
+async function callClaudeExtract(text) {
+  const key = getClaudeKey();
+  if (!key) throw new Error('未配置 API Key');
+  const peopleNames = db.people.map(p=>p.name).join('、') || '（暂无）';
+  const body = {
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    system: `你在帮用户解析一个人际关系管理app里的语音/文字速记。今天的日期是${todayStr()}。已知的人物：${peopleNames}。用户说的话可能口语化、有口头更正、填充词、语序混乱，并且因为是语音输入转文字，人名经常被识别错——中文名变成同音字（比如"阴越"被听成"音乐"，"姜泽城"被听成"讲这成"），英文名/英文译名也常被听写成发音相近但拼写不同的形式（比如"Eason"被听成"伊森"或"一生"，"Ethan"被听成"伊森"或"以三"）。请优先判断转录文本中提到的是不是已知人物列表里的某个人（不论中英文）——哪怕字面发音/拼写不对，只要发音相近且上下文合理，就修正成已知列表里那个正确的名字再返回，不要被错误的转录骗了。请提炼出干净准确的结构化信息，调用 extract_entry 工具返回。`,
+    messages: [{ role:'user', content:text }],
+    tools: [CLAUDE_EXTRACT_TOOL],
+    tool_choice: { type:'tool', name:'extract_entry' }
+  };
+  const r = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers: { 'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+    body: JSON.stringify(body)
+  }, 20000);
+  if (!r.ok) { const err = await r.json().catch(()=>({})); throw new Error(err.error?.message || ('API错误 '+r.status)); }
+  const json = await r.json();
+  const toolUse = (json.content||[]).find(c=>c.type==='tool_use');
+  if (!toolUse) throw new Error('未返回有效结果');
+  return toolUse.input;
+}
+
+async function testCloud() {
+  const binId  = document.getElementById('cfg-binid').value.trim();
+  const apiKey = document.getElementById('cfg-apikey').value.trim();
+  const st = document.getElementById('cfg-status');
+  if (!binId || !apiKey) { st.textContent = '⚠️ 请填写 Bin ID 和 Master Key'; st.style.color = 'var(--amber)'; return; }
+  st.textContent = '连接中…'; st.style.color = 'var(--text-3)';
+  try {
+    const r = await fetchWithTimeout(cloudUrl(binId), { headers: cloudHeaders(apiKey) });
+    if (r.ok) {
+      st.textContent = '✅ 连接成功！'; st.style.color = 'var(--teal)';
+    } else {
+      const err = await r.json().catch(()=>({}));
+      st.textContent = `❌ 失败 (${r.status})：${err.message||'检查 Bin ID 和 Key 是否正确'}`;
+      st.style.color = 'var(--coral)';
+    }
+  } catch(e) {
+    st.textContent = '❌ 网络错误：' + e.message;
+    st.style.color = 'var(--coral)';
+  }
+}
+
+async function saveCloudConfig() {
+  const binId  = document.getElementById('cfg-binid').value.trim();
+  const apiKey = document.getElementById('cfg-apikey').value.trim();
+  const st = document.getElementById('cfg-status');
+  if (!binId || !apiKey) { st.textContent = '⚠️ 请填写 Bin ID 和 Master Key'; st.style.color = 'var(--amber)'; return; }
+  st.textContent = '保存并同步中…'; st.style.color = 'var(--text-3)';
+  // First, try to fetch existing cloud data
+  try {
+    const r = await fetchWithTimeout(cloudUrl(binId), { headers: cloudHeaders(apiKey) });
+    if (r.ok) {
+      const json = await r.json();
+      const record = json.record || json;
+      // If cloud already has real data, pull it (don't overwrite with local)
+      if (record && (record.people?.length || record.interactions?.length || record.todos?.length)) {
+        const localHasData = db.people.length > 0;
+        if (localHasData) {
+          const choice = confirm('云端已有数据。\n\n点"确定"→ 使用云端数据（丢弃本地）\n点"取消"→ 上传本地数据（覆盖云端）');
+          if (choice) { db = record; normDB(); }
+        } else {
+          db = record; normDB();
+        }
+      }
+    }
+  } catch(e) {}
+  // Save config
+  setCloudCfg({ binId, apiKey });
+  // Push current db to cloud
+  try {
+    const r = await fetchWithTimeout(cloudPutUrl(binId), {
+      method: 'PUT', headers: cloudHeaders(apiKey), body: JSON.stringify(db)
+    });
+    if (r.ok) {
+      st.textContent = '✅ 已保存，云同步已启用！'; st.style.color = 'var(--teal)';
+      setBadge('cloud');
+      setTimeout(() => { closeOv('ov-settings'); buildPersonTabs(); renderToday(); }, 1200);
+    } else {
+      st.textContent = '❌ 保存失败，请检查 Key'; st.style.color = 'var(--coral)';
+    }
+  } catch(e) {
+    st.textContent = '❌ 网络错误'; st.style.color = 'var(--coral)';
+  }
+}
+
+function clearCloud() {
+  if (!confirm('清除云同步配置？数据仍保留在本地。')) return;
+  localStorage.removeItem('relmgr_cloud');
+  closeOv('ov-settings');
+  setBadge('local');
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function daysSince(d) { if (!d) return null; return Math.floor((Date.now()-new Date(d))/86400000); }
+function lastInt(pid) {
+  const a = db.interactions.filter(i=>i.personId===pid).sort((a,b)=>b.date.localeCompare(a.date));
+  return a.length ? a[0].date : null;
+}
+function checkedToday(pid) { return db.interactions.some(i=>i.personId===pid&&i.date===todayStr()); }
+function intsOnDate(pid,date) { return db.interactions.filter(i=>i.personId===pid&&i.date===date); }
+function getWeekRange() {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const day = now.getDay();
+  const diffToMon = day===0 ? -6 : 1-day;
+  const mon = new Date(now); mon.setDate(now.getDate()+diffToMon);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  return { start: mon.toISOString().slice(0,10), end: sun.toISOString().slice(0,10) };
+}
+function getStatsRange(period) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  if (period === 'day') { const s = now.toISOString().slice(0,10); return { start:s, end:s }; }
+  if (period === 'month') {
+    const s = new Date(now.getFullYear(), now.getMonth(), 1);
+    const e = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    return { start: s.toISOString().slice(0,10), end: e.toISOString().slice(0,10) };
+  }
+  return getWeekRange();
+}
+function computeStats(period) {
+  const { start, end } = getStatsRange(period);
+  const ints = db.interactions.filter(i => i.date >= start && i.date <= end);
+  const byPerson = {};
+  ints.forEach(i => {
+    if (!byPerson[i.personId]) byPerson[i.personId] = { count:0, duration:0 };
+    byPerson[i.personId].count++;
+    byPerson[i.personId].duration += parseInt(i.duration) || 0;
+  });
+  return db.people.map(p => ({
+    person: p,
+    count: byPerson[p.id]?.count || 0,
+    duration: byPerson[p.id]?.duration || 0,
+  })).filter(x => x.count > 0);
+}
+function checkedThisWeek(pid) {
+  const { start, end } = getWeekRange();
+  return db.interactions.some(i=>i.personId===pid && i.date>=start && i.date<=end);
+}
+function isLowPriority(p) {
+  if (p.color === 'black') return true;
+  const grp = p.groupId ? db.groups.find(g=>g.id===p.groupId) : null;
+  return !!(grp && grp.name === '不喜欢的');
+}
+function sortPeopleList(arr) {
+  return [...arr].sort((a,b) => {
+    const al = isLowPriority(a) ? 1 : 0, bl = isLowPriority(b) ? 1 : 0;
+    if (al !== bl) return al - bl;
+    return a.importance-b.importance || a.name.localeCompare(b.name);
+  });
+}
+function hasPendingTodo(pid) { return db.todos.some(t=>!t.done&&t.personId===pid); }
+function effectiveColor(pid) {
+  if (hasPendingTodo(pid)) return 'orange';
+  const p = db.people.find(x=>x.id===pid);
+  return (p && p.color) || 'gray';
+}
+function autoTraits(pid) {
+  const ints = db.interactions.filter(i=>i.personId===pid);
+  const p = db.people.find(x=>x.id===pid);
+  const allText = [
+    ...ints.map(i=>[i.notes||'',i.learned||''].join(' ')),
+    p ? [p.notes||'',p.bio||''].join(' ') : ''
+  ].join(' ');
+  if (!allText.trim()) return [];
+  return TRAIT_RULES.filter(r=>r.re.test(allText)).map(r=>r.label);
+}
+
+// ── STATE ──────────────────────────────────────────────────
+let curPid=null, editingPid=null, logPid=null;
+let dayPid=null, dayDate=null;
+let editingTodoId=null, fuPid=null;
+let selColor='gray', selType='work', selImp=2, selMethod='见面';
+let pMonths={}, pInnerTab={};
+
+// ── FOLLOW-UP ──────────────────────────────────────────────────
+function detectFollowup(text) {
+  if (!text) return null;
+  const sentences = text.split(/[。！？\n.!?]+/).map(s=>s.trim()).filter(Boolean);
+  return sentences.find(s=>FOLLOWUP_RE.test(s)) || null;
+}
+
+function parseFollowupDateTime(text) {
+  if (!text) return { date: null, time: null };
+  const today = new Date(); today.setHours(0,0,0,0);
+  let date = null, time = null;
+
+  // ── Time of day ──
+  if (/深夜|半夜/.test(text))               time = '22:00';
+  else if (/晚上|傍晚|夜里|晚间|今晚|明晚/.test(text)) time = '20:00';
+  else if (/下午|午后/.test(text))           time = '14:00';
+  else if (/中午|午饭|吃饭/.test(text))      time = '12:00';
+  else if (/早上|上午|早晨|清晨/.test(text)) time = '09:00';
+
+  // Specific hour: 下午3点 / 3:30 / 三点
+  const cnN = {'零':0,'一':1,'两':2,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10};
+  const hourRe = text.match(/(下午|上午|晚上)?\s*([零一两二三四五六七八九十\d]{1,2})\s*[点时:：](\d{0,2})?/);
+  if (hourRe) {
+    let raw = hourRe[2];
+    let h = /^\d+$/.test(raw) ? parseInt(raw) : (cnN[raw] ?? null);
+    if (h !== null) {
+      const prefix = hourRe[1] || '';
+      if (/下午|晚上/.test(prefix) && h < 12) h += 12;
+      else if (!prefix && h > 0 && h <= 7) h += 12; // 3点 默认下午
+      const mm = hourRe[3] ? hourRe[3].padEnd(2,'0') : '00';
+      time = String(h).padStart(2,'0') + ':' + mm;
+    }
+  }
+
+  // ── Chinese number helper ──
+  function parseCn(s) {
+    if (/^\d+$/.test(s)) return parseInt(s);
+    if (cnN[s] != null) return cnN[s];
+    if (s.includes('十')) {
+      const p = s.split('十');
+      return (p[0] ? (cnN[p[0]]??1) : 1)*10 + (p[1] ? (cnN[p[1]]??0) : 0);
+    }
+    return null;
+  }
+
+  // ── Date expressions (order matters: longest match first) ──
+  if (/大后天/.test(text)) {
+    date = new Date(today); date.setDate(date.getDate()+3);
+  } else if (/后天/.test(text)) {
+    date = new Date(today); date.setDate(date.getDate()+2);
+  } else if (/明天|明日|明晚/.test(text)) {
+    date = new Date(today); date.setDate(date.getDate()+1);
+  } else if (/今天|今日|今晚/.test(text)) {
+    date = new Date(today);
+  }
+
+  // 下周X
+  if (!date) {
+    const m = text.match(/下[周星期礼拜]([一二三四五六日天末])/);
+    if (m) {
+      const wdMap = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'日':0,'天':0,'末':6};
+      const targetWd = wdMap[m[1]];
+      const curWd = today.getDay();
+      const toNextMon = curWd===0 ? 1 : (8-curWd)%7||7;
+      const fromMon = targetWd===0 ? 6 : targetWd-1;
+      date = new Date(today); date.setDate(today.getDate()+toNextMon+fromMon);
+    } else if (/下[周星期礼拜]/.test(text)) {
+      const curWd = today.getDay();
+      const toNextMon = curWd===0 ? 1 : (8-curWd)%7||7;
+      date = new Date(today); date.setDate(today.getDate()+toNextMon);
+    }
+  }
+
+  // 本周X / 这周X
+  if (!date) {
+    const m = text.match(/[本这][周星期]([一二三四五六日天])/);
+    if (m) {
+      const wdMap = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'日':0,'天':0};
+      const target = wdMap[m[1]];
+      date = new Date(today);
+      const diff = target - today.getDay();
+      date.setDate(today.getDate()+diff);
+      if (date <= today) date.setDate(date.getDate()+7);
+    }
+  }
+
+  // X天后
+  if (!date) {
+    const m = text.match(/([一二三四五六七八九十\d]+)天后/);
+    if (m) { const n=parseCn(m[1]); if(n){date=new Date(today);date.setDate(today.getDate()+n);} }
+  }
+  // X周后
+  if (!date) {
+    const m = text.match(/([一二三四五六七八九十\d]+)[周星期]后/);
+    if (m) { const n=parseCn(m[1]); if(n){date=new Date(today);date.setDate(today.getDate()+n*7);} }
+  }
+  // X个月后 / 下个月
+  if (!date) {
+    const m = text.match(/([一二三四五六七八九十\d]+)个?月后/);
+    if (m) { const n=parseCn(m[1]); if(n){date=new Date(today);date.setMonth(today.getMonth()+n);} }
+    else if (/下个月|下月/.test(text)) { date=new Date(today.getFullYear(),today.getMonth()+1,1); }
+  }
+  // X月X号/日
+  if (!date) {
+    const m = text.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*[号日]/);
+    if (m) {
+      date = new Date(today.getFullYear(), parseInt(m[1])-1, parseInt(m[2]));
+      if (date < today) date.setFullYear(date.getFullYear()+1);
+    }
+  }
+
+  return { date: date ? date.toISOString().slice(0,10) : null, time };
+}
+
+function maybeShowFollowup(pid, notes, followupText) {
+  const detected = followupText || detectFollowup(notes);
+  if (!detected) return;
+  fuPid = pid;
+  const parsed = parseFollowupDateTime([followupText, notes].filter(Boolean).join(' '));
+  document.getElementById('fu-detected-text').textContent = detected;
+  document.getElementById('fu-title').value = detected.slice(0,60);
+  // Date: use parsed or default tomorrow
+  if (parsed.date) {
+    document.getElementById('fu-date').value = parsed.date;
+  } else {
+    const tom = new Date(); tom.setDate(tom.getDate()+1);
+    document.getElementById('fu-date').value = tom.toISOString().slice(0,10);
+  }
+  // Time: only fill if actually detected in text
+  document.getElementById('fu-time').value = parsed.time || '';
+  document.getElementById('fu-note').value = '';
+  openOv('ov-followup');
+}
+function saveFollowup(addCal) {
+  const title = document.getElementById('fu-title').value.trim();
+  if (!title) { alert('请填写待办标题'); return; }
+  const todo = { id:uid(), title, dueDate:document.getElementById('fu-date').value, dueTime:document.getElementById('fu-time').value, personId:fuPid, done:false, notes:document.getElementById('fu-note').value.trim(), createdDate:todayStr() };
+  db.todos.push(todo); save(); closeOv('ov-followup');
+  if (addCal) addToCalendar(todo);
+  if (document.getElementById('pg-todos').classList.contains('on')) renderTodos();
+  if (fuPid) { buildPersonTabs(); if (curPid===fuPid) renderPersonPage(fuPid); }
+}
+
+// ── ICS CALENDAR (opens local Outlook / Calendar app) ──────────
+function addToCalendar(todo) {
+  const p = db.people.find(x=>x.id===todo.personId);
+  const title = (todo.title + (p?' — '+p.name:'')).replace(/[,;\\]/g,' ');
+  const desc  = [todo.notes, p?'关联：'+p.name:'', '来自人际关系管理'].filter(Boolean).join('\\n');
+  const date  = (todo.dueDate || todayStr()).replace(/-/g,'');
+  const stamp = new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  const id    = uid() + '@relmgr';
+
+  let dtStart, dtEnd, allday;
+  if (todo.dueTime && todo.dueTime.trim()) {
+    const [hh,mm] = todo.dueTime.split(':');
+    const endH = String(parseInt(hh)+1).padStart(2,'0');
+    dtStart = `DTSTART:${date}T${hh}${mm}00`;
+    dtEnd   = `DTEND:${date}T${endH}${mm}00`;
+    allday  = false;
+  } else {
+    const nextDate = new Date(todo.dueDate||todayStr()); nextDate.setDate(nextDate.getDate()+1);
+    const nd = nextDate.toISOString().slice(0,10).replace(/-/g,'');
+    dtStart = `DTSTART;VALUE=DATE:${date}`;
+    dtEnd   = `DTEND;VALUE=DATE:${nd}`;
+    allday  = true;
+  }
+
+  const ics = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//RelMgr//EN','CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${id}`,
+    `DTSTAMP:${stamp}`,
+    dtStart, dtEnd,
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${desc}`,
+    'END:VEVENT','END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = title.slice(0,40).replace(/[^一-龥\w]/g,'_') + '.ics';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+}
+
+// ── TABS ──────────────────────────────────────────────────
+function getCollapsed() {
+  try { return new Set(JSON.parse(localStorage.getItem('relmgr_collapsed')||'[]')); } catch(e) { return new Set(); }
+}
+function setCollapsed(set) {
+  localStorage.setItem('relmgr_collapsed', JSON.stringify([...set]));
+}
+function toggleGroupCollapse(key) {
+  const c = getCollapsed();
+  if (c.has(key)) c.delete(key); else c.add(key);
+  setCollapsed(c);
+  buildPersonTabs();
+}
+function expandAllGroups() { setCollapsed(new Set()); buildPersonTabs(); }
+function collapseAllGroups() {
+  const keys = db.groups.map(g=>g.id).concat(['__none__']);
+  setCollapsed(new Set(keys));
+  buildPersonTabs();
+}
+
+function buildPersonTabs() {
+  const nav = document.getElementById('sidebar-people');
+  nav.innerHTML = '';
+
+  const byGroup = {};
+  db.people.forEach(p=>{ const k=p.groupId||'__none__'; (byGroup[k]=byGroup[k]||[]).push(p); });
+  Object.values(byGroup).forEach(arr=>arr.sort((a,b)=>(a.order||0)-(b.order||0)||a.name.localeCompare(b.name)));
+  const collapsed = getCollapsed();
+
+  function appendPersonBtn(p) {
+    const c = effectiveColor(p.id);
+    const bg = PALETTE[c]?.bg||'#8E8E8E';
+    const btn = document.createElement('button');
+    btn.className='sb-person-row'; btn.dataset.pid=p.id;
+    btn.innerHTML=`<span class="sb-dot" style="background:${bg}"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.name)}</span>`;
+    btn.onclick=()=>showPerson(p.id);
+    nav.appendChild(btn);
+  }
+  function appendLabel(text, key, count) {
+    const isOpen = !collapsed.has(key);
+    const lbl = document.createElement('button');
+    lbl.className = 'sb-group-hdr';
+    lbl.dataset.glabel='1';
+    lbl.innerHTML = `<span style="font-size:9px;display:inline-block;transform:rotate(${isOpen?'90':'0'}deg);transition:transform .12s">▸</span> ${escHtml(text)} <span style="opacity:.55">(${count})</span>`;
+    lbl.onclick=()=>toggleGroupCollapse(key);
+    nav.appendChild(lbl);
+  }
+
+  const ungrouped = byGroup['__none__'];
+  if (ungrouped && ungrouped.length) ungrouped.forEach(appendPersonBtn);
+
+  [...db.groups].sort((a,b)=>(a.order||0)-(b.order||0)).forEach(g=>{
+    const ppl = byGroup[g.id];
+    if (!ppl || !ppl.length) return;
+    appendLabel(g.name, g.id, ppl.length);
+    if (!collapsed.has(g.id)) ppl.forEach(appendPersonBtn);
+  });
+
+  if (!db.people.length) nav.innerHTML = '<div class="og-empty">还没有人物</div>';
+  highlightActiveSidebar();
+}
+function highlightActiveSidebar() {
+  document.querySelectorAll('.sb-nav-link, .sb-person-row').forEach(el=>el.classList.remove('active'));
+  if (curActiveId === 'today') document.getElementById('tab-today')?.classList.add('active');
+  else if (curActiveId === 'todos') document.getElementById('tab-todos')?.classList.add('active');
+  else if (curActiveId === 'stats') document.getElementById('tab-stats')?.classList.add('active');
+  else if (curActiveId) document.querySelector(`.sb-person-row[data-pid="${curActiveId}"]`)?.classList.add('active');
+}
+// ── GROUPS & ORDER MANAGER ──────────────────────────────────────
+function openOrgManager() {
+  document.getElementById('og-new-group').value = '';
+  renderOrgList();
+  openOv('ov-org');
+}
+function renderOrgList() {
+  const el = document.getElementById('org-list');
+  const byGroup = {};
+  db.people.forEach(p=>{ const k=p.groupId||'__none__'; (byGroup[k]=byGroup[k]||[]).push(p); });
+  Object.values(byGroup).forEach(arr=>arr.sort((a,b)=>(a.order||0)-(b.order||0)||a.name.localeCompare(b.name)));
+
+  const groupOptions = (curId) => `<option value=""${!curId?' selected':''}>未分组</option>` +
+    db.groups.map(g=>`<option value="${g.id}"${g.id===curId?' selected':''}>${escHtml(g.name)}</option>`).join('');
+
+  function personRow(p) {
+    return `<div class="og-person-row og-drag-row" data-pid="${p.id}">
+      <span class="og-drag-handle" title="拖动排序">⠿</span>
+      <span class="og-person-name">${escHtml(p.name)}</span>
+      <select class="og-sel" onchange="movePersonToGroup('${p.id}', this.value)">${groupOptions(p.groupId)}</select>
+    </div>`;
+  }
+
+  let html = '';
+  const ungrouped = byGroup['__none__'] || [];
+  html += `<div class="og-group" data-gid="__none__">
+    <div class="og-group-hdr"><span class="og-group-name" style="color:var(--text-3)">未分组</span></div>
+    <div class="og-rows" data-gid="__none__">${ungrouped.length ? ungrouped.map(personRow).join('') : '<div class="og-empty">没有未分组的人</div>'}</div>
+  </div>`;
+
+  const sortedGroups = [...db.groups].sort((a,b)=>(a.order||0)-(b.order||0));
+  sortedGroups.forEach(g=>{
+    const ppl = byGroup[g.id] || [];
+    html += `<div class="og-group og-drag-row" data-gid="${g.id}">
+      <div class="og-group-hdr">
+        <span class="og-drag-handle" title="拖动排序分组">⠿</span>
+        <span class="og-group-name">📁 ${escHtml(g.name)}</span>
+        <button class="og-iconbtn" onclick="renameGroup('${g.id}')" title="改名">✎</button>
+        <button class="og-iconbtn danger" onclick="deleteGroup('${g.id}')" title="删除分组">×</button>
+      </div>
+      <div class="og-rows" data-gid="${g.id}">${ppl.length ? ppl.map(personRow).join('') : '<div class="og-empty">这个分组还没有人</div>'}</div>
+    </div>`;
+  });
+
+  el.innerHTML = html || '<div class="og-empty">还没有人物</div>';
+  wireOrgDrag();
+}
+
+// ── DRAG TO REORDER (pointer events, works for touch + mouse) ──
+function wireOrgDrag() {
+  // Person rows: draggable within their own group's row list
+  document.querySelectorAll('#org-list .og-rows').forEach(rowsEl => {
+    const gid = rowsEl.dataset.gid === '__none__' ? null : rowsEl.dataset.gid;
+    initDragGroup(rowsEl, '.og-person-row', (orderedIds) => {
+      orderedIds.forEach((pid, i) => {
+        const p = db.people.find(x=>x.id===pid);
+        if (p) { p.groupId = gid; p.order = i+1; }
+      });
+      save(); renderOrgList(); buildPersonTabs();
+    });
+  });
+  // Group headers: draggable to reorder groups
+  const orgList = document.getElementById('org-list');
+  initDragGroup(orgList, '.og-group[data-gid]:not([data-gid="__none__"])', (orderedIds) => {
+    orderedIds.forEach((gid, i) => {
+      const g = db.groups.find(x=>x.id===gid);
+      if (g) g.order = i+1;
+    });
+    save(); renderOrgList(); buildPersonTabs();
+  }, true);
+}
+
+function initDragGroup(container, itemSelector, onReorder, isGroupLevel) {
+  const items = [...container.querySelectorAll(itemSelector)].filter(el => isGroupLevel ? el.parentElement===container : true);
+  items.forEach(row => {
+    const handle = row.querySelector(':scope > .og-drag-handle, :scope > .og-group-hdr > .og-drag-handle');
+    if (!handle) return;
+    handle.onpointerdown = (e) => {
+      e.preventDefault();
+      const siblings = [...container.querySelectorAll(itemSelector)].filter(el => isGroupLevel ? el.parentElement===container : true);
+      const startIdx = siblings.indexOf(row);
+      const rects = siblings.map(r=>r.getBoundingClientRect());
+      const startY = e.clientY;
+      row.classList.add('og-dragging');
+      const onMove = (ev) => { row.style.transform = `translateY(${ev.clientY-startY}px)`; };
+      const onUp = (ev) => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        row.style.transform=''; row.classList.remove('og-dragging');
+        const finalY = ev.clientY;
+        let targetIdx = rects.length-1;
+        for (let i=0;i<rects.length;i++) { if (finalY < rects[i].top+rects[i].height/2) { targetIdx=i; break; } }
+        if (targetIdx === startIdx) return;
+        const ids = siblings.map(r=> r.dataset.pid || r.dataset.gid);
+        const moved = ids.splice(startIdx,1)[0];
+        ids.splice(targetIdx,0,moved);
+        onReorder(ids);
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    };
+  });
+}
+
+function addGroup() {
+  const input = document.getElementById('og-new-group');
+  const name = input.value.trim();
+  if (!name) return;
+  const maxOrder = db.groups.reduce((m,g)=>Math.max(m,g.order||0),0);
+  db.groups.push({ id: uid(), name, order: maxOrder+1 });
+  save(); input.value=''; renderOrgList(); buildPersonTabs();
+}
+function renameGroup(gid) {
+  const g = db.groups.find(x=>x.id===gid); if (!g) return;
+  const name = prompt('分组名称', g.name);
+  if (name === null) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  g.name = trimmed; save(); renderOrgList(); buildPersonTabs();
+}
+function deleteGroup(gid) {
+  if (!confirm('删除分组？组里的人会变成未分组（不会被删除）。')) return;
+  db.people.forEach(p=>{ if (p.groupId===gid) p.groupId=null; });
+  db.groups = db.groups.filter(g=>g.id!==gid);
+  save(); renderOrgList(); buildPersonTabs();
+}
+function movePersonToGroup(pid, gid) {
+  const p = db.people.find(x=>x.id===pid); if (!p) return;
+  p.groupId = gid || null;
+  const siblings = db.people.filter(x=>(x.groupId||null)===(p.groupId||null));
+  p.order = siblings.reduce((m,x)=>Math.max(m,x.order||0),0) + 1;
+  save(); renderOrgList(); buildPersonTabs();
+}
+
+let curActiveId = 'today';
+function setActiveTab(id) {
+  curActiveId = id;
+  highlightActiveSidebar();
+  const sel = id==='today'?document.getElementById('tab-today'):id==='todos'?document.getElementById('tab-todos'):id==='stats'?document.getElementById('tab-stats'):document.querySelector(`.sb-person-row[data-pid="${id}"]`);
+  if (sel) sel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  const titleMap = { today:'今日', todos:'待办', stats:'统计' };
+  const titleEl = document.getElementById('topbar-title');
+  if (titleEl) {
+    if (titleMap[id]) titleEl.textContent = titleMap[id];
+    else { const p = db.people.find(x=>x.id===id); titleEl.textContent = p ? p.name : ''; }
+  }
+}
+function hidePages() { document.querySelectorAll('.page').forEach(p=>p.classList.remove('on')); }
+function toggleSidebar() { document.body.classList.toggle('sidebar-open'); }
+function closeSidebar() { document.body.classList.remove('sidebar-open'); }
+function gotoToday() { hidePages(); document.getElementById('pg-today').classList.add('on'); setActiveTab('today'); renderToday(); closeSidebar(); }
+function gotoTodos() { hidePages(); document.getElementById('pg-todos').classList.add('on'); setActiveTab('todos'); renderTodos(); closeSidebar(); }
+function gotoStats() { hidePages(); document.getElementById('pg-stats').classList.add('on'); setActiveTab('stats'); renderStats(); closeSidebar(); }
+function showPerson(pid) {
+  curPid=pid; hidePages();
+  let pg=document.getElementById('pp-'+pid);
+  if (!pg){pg=document.createElement('div');pg.className='page';pg.id='pp-'+pid;document.querySelector('.main-area').appendChild(pg);}
+  pg.classList.add('on'); setActiveTab(pid);
+  if (!pMonths[pid]) pMonths[pid]=new Date();
+  if (!pInnerTab[pid]) pInnerTab[pid]='cal';
+  renderPersonPage(pid);
+  closeSidebar();
+}
+
+// ── TODAY ──────────────────────────────────────────────────
+function renderToday() {
+  const d = new Date();
+  document.getElementById('hdr-date').textContent = d.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  const sorted = sortPeopleList(db.people);
+  const pend = sorted.filter(p=>!checkedToday(p.id));
+  const done = sorted.filter(p=>checkedToday(p.id));
+  const weekDone = sorted.filter(p=>checkedThisWeek(p.id));
+  const weekPend = sorted.filter(p=>!checkedThisWeek(p.id));
+  const dueTodos = db.todos.filter(t=>!t.done&&t.dueDate&&t.dueDate<=todayStr());
+  let sub = db.people.length?`今日已联系 ${done.length} / ${db.people.length} 人`:'点右上角 + 添加人物';
+  if (dueTodos.length) sub += `　⚠️ ${dueTodos.length} 项待办到期`;
+  document.getElementById('hdr-sub').textContent = sub;
+  document.getElementById('sec-done').style.display = done.length?'block':'none';
+  document.getElementById('rows-done').innerHTML = done.map(p=>todayRowH(p,true)).join('');
+  document.getElementById('rows-pend').innerHTML = pend.map(p=>todayRowH(p,false)).join('') || '<div style="color:var(--teal);font-size:14px;padding:8px 0">今天全部联系过了 🎉</div>';
+  document.getElementById('rows-week-done').innerHTML = weekDone.map(p=>todayRowH(p,true)).join('') || '<div style="color:var(--text-3);font-size:14px;padding:8px 0">本周还没联系过任何人</div>';
+  document.getElementById('rows-week-pend').innerHTML = weekPend.map(p=>todayRowH(p,false)).join('') || '<div style="color:var(--teal);font-size:14px;padding:8px 0">本周全部联系过了 🎉</div>';
+}
+function todayRowH(p,done) {
+  const c = effectiveColor(p.id);
+  const bg = PALETTE[c]?.bg||'#8E8E8E';
+  return `<div class="t-row ${done?'faded':''}" onclick="showPerson('${p.id}')">
+    <div class="av av-md" style="background:${bg}">${p.name.charAt(0).toUpperCase()}</div>
+    <div class="tr-info">
+      <div class="tr-name">${p.name}</div>
+      <div class="tr-status">${p.status||p.role||TL[p.type]||''}</div>
+    </div>
+    <button class="tr-btn ${done?'done':''}" data-pid="${p.id}" onclick="qCheck(event)">${done?'✓ 已联系':'打卡'}</button>
+  </div>`;
+}
+function qCheck(e) {
+  e.stopPropagation();
+  const pid=e.currentTarget.dataset.pid;
+  if (!checkedToday(pid)){db.interactions.push({id:uid(),personId:pid,date:todayStr(),duration:'',method:'',notes:'',learned:''});save();}
+  renderToday();
+}
+
+// ── QUICK CAPTURE (smart text / voice entry) ──────────────────
+function guessNewPersonName(text) {
+  const existingNames = new Set(db.people.map(p=>p.name));
+  const patterns = [
+    /(?:跟|和|与|同)([一-龥A-Za-z]{2,8}?)(?:聊|说|讨论|提到|见面|吃饭|打电话|视频|约|出去|喝|玩)/,
+    /([一-龥A-Za-z]{2,8}?)(?:说|告诉我|跟我说|提到|发消息)/,
+  ];
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (m && m[1] && !existingNames.has(m[1])) return m[1];
+  }
+  return null;
+}
+const INTERACTION_RE = /聊天|聊了|聊一聊|见面|见了面|打电话|电话里|视频|发消息|发短信|短信|吃饭|喝了一杯|约了|出去玩|碰面|逛街|看电影|开会|拜访|聚会|聚餐|讨论了|沟通了|一起去|一起吃|联系了/;
+function extractHometown(text) {
+  const m = text.match(/是([一-龥]{2,6})人/) || text.match(/来自([一-龥]{2,6})/) || text.match(/老家(?:是|在)([一-龥]{2,6})/);
+  return m ? m[1] : null;
+}
+function extractBirthday(text) {
+  const m = text.match(/生日(?:是|在)?([一-龥\d]{1,2}月[一-龥\d]{1,3}[日号])/) ||
+            text.match(/([一-龥\d]{1,2}月[一-龥\d]{1,3}[日号])(?:生|出生|的生日)/) ||
+            text.match(/(\d{4}年[一-龥\d]{1,2}月[一-龥\d]{1,3}[日号])/);
+  return m ? m[1] : null;
+}
+function splitIntoFacts(text) {
+  let parts = text.split(/[，,。；;！!？?\n]+/).map(s=>s.trim()).filter(Boolean);
+  if (parts.length <= 1) {
+    parts = text.split(/(?=但是|不过|后来|现在|而且|然后|因为|所以|之前|目前)/).map(s=>s.trim()).filter(Boolean);
+  }
+  const merged = [];
+  parts.forEach(p => {
+    if (merged.length && p.length < 4) merged[merged.length-1] += p;
+    else merged.push(p);
+  });
+  return merged.filter(s=>s.length>=2);
+}
+function smartParseEntry(text) {
+  if (!text || !text.trim()) return null;
+  let matchedPerson = null, bestLen = 0;
+  db.people.forEach(p => {
+    if (p.name && text.includes(p.name) && p.name.length > bestLen) { matchedPerson = p; bestLen = p.name.length; }
+  });
+  let date = todayStr();
+  if (/大前天/.test(text)) { const dd=new Date(); dd.setDate(dd.getDate()-3); date=dd.toISOString().slice(0,10); }
+  else if (/前天/.test(text)) { const dd=new Date(); dd.setDate(dd.getDate()-2); date=dd.toISOString().slice(0,10); }
+  else if (/昨天|昨日/.test(text)) { const dd=new Date(); dd.setDate(dd.getDate()-1); date=dd.toISOString().slice(0,10); }
+  const followupText = detectFollowup(text);
+  const guessedName = matchedPerson ? null : guessNewPersonName(text);
+  const isEvent = INTERACTION_RE.test(text);
+  const facts = isEvent ? [] : splitIntoFacts(text);
+  const hometown = extractHometown(text);
+  const birthday = extractBirthday(text);
+  return { person: matchedPerson, date, notes: text.trim(), followupText, guessedName, isEvent, facts, hometown, birthday };
+}
+
+let qcParseTimer = null, qcMode = 'event', qcModeManual = false;
+function openQuickCapture() {
+  document.getElementById('qc-text').value = '';
+  document.getElementById('qc-preview').style.display = 'none';
+  document.getElementById('qc-newname-row').style.display = 'none';
+  document.getElementById('qc-newname').value = '';
+  document.getElementById('qc-basicinfo-row').style.display = 'none';
+  document.getElementById('qc-hometown-row').style.display = 'none';
+  document.getElementById('qc-hometown').value = '';
+  document.getElementById('qc-birthday-row').style.display = 'none';
+  document.getElementById('qc-birthday').value = '';
+  document.getElementById('qc-ai-row').style.display = getClaudeKey() ? 'block' : 'none';
+  document.getElementById('qc-ai-status').textContent = '';
+  qcMode = 'event'; qcModeManual = false; qcBaseText = '';
+  initQcMic();
+  openOv('ov-quickcap');
+  setTimeout(()=>{ const t=document.getElementById('qc-text'); t.focus(); }, 200);
+}
+async function qcAIParse() {
+  const text = document.getElementById('qc-text').value.trim();
+  const st = document.getElementById('qc-ai-status');
+  if (!text) { st.textContent = '请先输入或说点什么'; st.style.color = 'var(--coral)'; return; }
+  st.textContent = '✨ AI 解析中…'; st.style.color = 'var(--purple)';
+  try {
+    const r = await callClaudeExtract(text);
+    document.getElementById('qc-text').value = r.corrected_text || text;
+    qcApplyAIResult(r);
+    st.textContent = '✅ AI 解析完成，已自动填写下方字段'; st.style.color = 'var(--teal)';
+  } catch(e) {
+    st.textContent = '❌ ' + e.message; st.style.color = 'var(--coral)';
+  }
+}
+function qcApplyAIResult(r) {
+  const prev = document.getElementById('qc-preview');
+  prev.style.display = 'block';
+  qcMode = r.is_interaction_event ? 'event' : 'update';
+  qcModeManual = true;
+  qcApplyModeUI();
+
+  const matched = r.person_name ? db.people.find(p=>p.name===r.person_name) : null;
+  const sel = document.getElementById('qc-person');
+  const noMatch = !matched;
+  sel.innerHTML = '<option value="">— 请选择人物 —</option>' +
+    `<option value="__new__"${noMatch?' selected':''}>+ 新建人物…</option>` +
+    [...db.people].sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${p.id}"${matched&&matched.id===p.id?' selected':''}>${escHtml(p.name)}</option>`).join('');
+  const newRow = document.getElementById('qc-newname-row');
+  const newInput = document.getElementById('qc-newname');
+  if (noMatch) { newRow.style.display = 'block'; newInput.value = r.person_name || ''; }
+  else { newRow.style.display = 'none'; newInput.value = ''; }
+
+  document.getElementById('qc-date').value = r.date_hint || todayStr();
+  document.getElementById('qc-todo-hint').textContent = r.followup_text ? '📌 检测到待办：' + r.followup_text : '';
+  qcSetBasicInfo(r.hometown, r.birthday);
+  document.getElementById('qc-facts-list').innerHTML = (r.facts||[]).map(f=>`<li>${escHtml(f)}</li>`).join('') || '<li style="color:var(--text-3)">没识别出明确的要点，会整段存为一条笔记</li>';
+}
+function qcSetMode(v) {
+  qcMode = v; qcModeManual = true;
+  document.querySelectorAll('#qc-mode-seg .so').forEach(o=>o.classList.toggle('sel', o.dataset.v===v));
+  qcApplyModeUI();
+}
+document.getElementById('qc-mode-seg').addEventListener('click', e=>{ const o=e.target.closest('.so'); if(!o) return; qcSetMode(o.dataset.v); });
+function qcApplyModeUI() {
+  const isEvent = qcMode === 'event';
+  document.getElementById('qc-date-col').style.display = isEvent ? 'block' : 'none';
+  document.getElementById('qc-facts-preview').style.display = isEvent ? 'none' : 'block';
+  document.querySelectorAll('#qc-mode-seg .so').forEach(o=>o.classList.toggle('sel', o.dataset.v===qcMode));
+}
+function qcSetBasicInfo(hometown, birthday) {
+  const wrap = document.getElementById('qc-basicinfo-row');
+  const hRow = document.getElementById('qc-hometown-row');
+  const bRow = document.getElementById('qc-birthday-row');
+  wrap.style.display = (hometown || birthday) ? 'grid' : 'none';
+  if (hometown) { hRow.style.display = 'block'; document.getElementById('qc-hometown').value = hometown; }
+  else { hRow.style.display = 'none'; document.getElementById('qc-hometown').value = ''; }
+  if (birthday) { bRow.style.display = 'block'; document.getElementById('qc-birthday').value = birthday; }
+  else { bRow.style.display = 'none'; document.getElementById('qc-birthday').value = ''; }
+}
+function qcAutoParse() {
+  clearTimeout(qcParseTimer);
+  qcParseTimer = setTimeout(() => {
+    const text = document.getElementById('qc-text').value;
+    const parsed = smartParseEntry(text);
+    const prev = document.getElementById('qc-preview');
+    if (!parsed) { prev.style.display = 'none'; return; }
+    prev.style.display = 'block';
+    if (!qcModeManual) qcMode = parsed.isEvent ? 'event' : 'update';
+    qcApplyModeUI();
+    const sel = document.getElementById('qc-person');
+    const noMatch = !parsed.person;
+    sel.innerHTML = '<option value="">— 请选择人物 —</option>' +
+      `<option value="__new__"${noMatch?' selected':''}>+ 新建人物…</option>` +
+      [...db.people].sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${p.id}"${parsed.person&&parsed.person.id===p.id?' selected':''}>${escHtml(p.name)}</option>`).join('');
+    document.getElementById('qc-date').value = parsed.date;
+    document.getElementById('qc-todo-hint').textContent = parsed.followupText ? '📌 检测到待办：' + parsed.followupText : '';
+    const newRow = document.getElementById('qc-newname-row');
+    const newInput = document.getElementById('qc-newname');
+    if (noMatch) { newRow.style.display = 'block'; if (parsed.guessedName) newInput.value = parsed.guessedName; }
+    else { newRow.style.display = 'none'; newInput.value = ''; }
+    qcSetBasicInfo(parsed.hometown, parsed.birthday);
+    document.getElementById('qc-facts-list').innerHTML = parsed.facts.map(f=>`<li>${escHtml(f)}</li>`).join('') || '<li style="color:var(--text-3)">没识别出明确的要点，会整段存为一条笔记</li>';
+  }, 350);
+}
+function qcPersonChange() {
+  const v = document.getElementById('qc-person').value;
+  document.getElementById('qc-newname-row').style.display = v === '__new__' ? 'block' : 'none';
+}
+function qcConfirm() {
+  const text = document.getElementById('qc-text').value.trim();
+  if (!text) { alert('请先输入或说点什么'); return; }
+  const prev = document.getElementById('qc-preview');
+  if (prev.style.display === 'none') qcAutoParse();
+  let pid = document.getElementById('qc-person').value;
+  if (!pid) { alert('请选择对应的人物（识别不到的话手动选一下，或新建）'); return; }
+  if (pid === '__new__') {
+    const newName = document.getElementById('qc-newname').value.trim();
+    if (!newName) { alert('请输入新人物的姓名'); return; }
+    const maxOrder = db.people.reduce((m,x)=>Math.max(m,x.order||0),0);
+    const newPerson = { id:uid(), name:newName, role:'', contact:'', notes:'', status:'', hometown:'', birthday:'', color:'gray', type:'work', importance:2, facts:[], tags:[], bio:'', groupId:null, order:maxOrder+1 };
+    db.people.push(newPerson);
+    pid = newPerson.id;
+  }
+  const hometownVal = document.getElementById('qc-hometown').value.trim();
+  const birthdayVal = document.getElementById('qc-birthday').value.trim();
+  if (hometownVal || birthdayVal) {
+    const p = db.people.find(x=>x.id===pid);
+    if (p) { if (hometownVal) p.hometown = hometownVal; if (birthdayVal) p.birthday = birthdayVal; }
+  }
+  const todoHintText = document.getElementById('qc-todo-hint').textContent.replace(/^📌 检测到待办：/, '').trim();
+
+  if (qcMode === 'update') {
+    const p = db.people.find(x=>x.id===pid);
+    if (p) {
+      if (!p.facts) p.facts = [];
+      const today = todayStr();
+      const liEls = [...document.querySelectorAll('#qc-facts-list li')].map(li=>li.textContent.trim()).filter(t=>t && !t.startsWith('没识别出'));
+      const bullets = liEls.length ? liEls : [text];
+      bullets.reverse().forEach(b => p.facts.unshift({ date: today, text: b }));
+    }
+    save();
+    if (qcListening) qcToggleMic();
+    closeOv('ov-quickcap');
+    buildPersonTabs();
+    if (curPid===pid) renderPersonPage(pid);
+    if (todoHintText) setTimeout(()=>maybeShowFollowup(pid, text, todoHintText), 200);
+    return;
+  }
+
+  const date = document.getElementById('qc-date').value || todayStr();
+  const bare = db.interactions.findIndex(i=>i.personId===pid&&i.date===date&&!i.notes&&!i.learned&&!i.duration&&!i.method);
+  if (bare>=0) db.interactions.splice(bare,1);
+  db.interactions.push({ id:uid(), personId:pid, date, duration:'', method:'', notes:text, learned:'' });
+  save();
+  if (qcListening) qcToggleMic();
+  closeOv('ov-quickcap');
+  renderToday(); buildPersonTabs();
+  if (curPid===pid) renderPersonPage(pid);
+  if (todoHintText) setTimeout(()=>maybeShowFollowup(pid, text, todoHintText), 200);
+}
+
+let qcRecognition = null, qcListening = false, qcBaseText = '';
+function initQcMic() {
+  const btn = document.getElementById('qc-mic-btn');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { btn.style.display = 'none'; return; }
+  btn.style.display = 'inline-flex';
+  btn.classList.remove('listening'); btn.textContent = '🎤 按这里开始说话';
+  qcListening = false;
+  if (qcRecognition) { try { qcRecognition.onend = null; qcRecognition.stop(); } catch(e) {} }
+  qcRecognition = new SR();
+  qcRecognition.lang = 'zh-CN';
+  qcRecognition.continuous = true;
+  qcRecognition.interimResults = true;
+  qcRecognition.onresult = (e) => {
+    // Append this session's transcript onto whatever was already in the box
+    // (instead of overwriting it) so manual edits / earlier text aren't lost.
+    let sessionTxt = '';
+    for (let i=0;i<e.results.length;i++) sessionTxt += e.results[i][0].transcript;
+    document.getElementById('qc-text').value = qcBaseText + sessionTxt;
+    qcAutoParse();
+  };
+  qcRecognition.onend = () => { qcListening = false; btn.classList.remove('listening'); btn.textContent = '🎤 按这里开始说话'; };
+}
+function qcToggleMic() {
+  if (!qcRecognition) return;
+  const btn = document.getElementById('qc-mic-btn');
+  if (qcListening) {
+    qcRecognition.stop(); qcListening = false;
+    btn.classList.remove('listening'); btn.textContent = '🎤 按这里开始说话';
+  } else {
+    // Capture whatever's currently in the box (including manual edits) as the
+    // base text — new speech gets appended onto it instead of replacing it.
+    const ta = document.getElementById('qc-text');
+    qcBaseText = ta.value;
+    try { qcRecognition.start(); qcListening = true; btn.classList.add('listening'); btn.textContent = '⏹ 停止说话'; }
+    catch(e) {}
+  }
+}
+
+// ── TODOS ──────────────────────────────────────────────────
+// ── STATS ──────────────────────────────────────────────────
+let statPeriod = 'week';
+function selectStatPeriod(v) {
+  statPeriod = v;
+  document.querySelectorAll('#seg-stat-period .so').forEach(o=>o.classList.toggle('sel', o.dataset.v===v));
+  renderStats();
+}
+function renderBarChart(data, key, unit) {
+  if (!data.length) return '<div class="empty-msg">这段时间还没有记录</div>';
+  const sorted = [...data].sort((a,b)=>b[key]-a[key]);
+  const max = Math.max(...sorted.map(d=>d[key]), 1);
+  return sorted.map(d => {
+    const pct = Math.max((d[key]/max*100), 3).toFixed(1);
+    const c = effectiveColor(d.person.id);
+    const bg = PALETTE[c]?.bg||'#8E8E8E';
+    return `<div class="stat-bar-row">
+      <div class="stat-bar-name">${escHtml(d.person.name)}</div>
+      <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:${bg}"></div></div>
+      <div class="stat-bar-val">${d[key]} ${unit}</div>
+    </div>`;
+  }).join('');
+}
+function renderStatTable(data) {
+  if (!data.length) return '<tr><td colspan="4" class="empty-msg">这段时间还没有记录</td></tr>';
+  const sorted = [...data].sort((a,b)=>b.count-a.count);
+  const rows = sorted.map(d => {
+    const avg = d.count ? Math.round(d.duration/d.count) : 0;
+    return `<tr><td>${escHtml(d.person.name)}</td><td>${d.count} 次</td><td>${d.duration} 分钟</td><td>${avg ? avg+' 分钟' : '—'}</td></tr>`;
+  }).join('');
+  return `<thead><tr><th>人物</th><th>联系次数</th><th>总时长</th><th>平均时长</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function renderStats() {
+  document.querySelectorAll('#seg-stat-period .so').forEach(o=>o.classList.toggle('sel', o.dataset.v===statPeriod));
+  const data = computeStats(statPeriod);
+  const totalCount = data.reduce((s,d)=>s+d.count,0);
+  const totalDur = data.reduce((s,d)=>s+d.duration,0);
+  document.getElementById('stat-summary').innerHTML = `
+    <div class="pc-stat"><div class="pc-stat-v">${data.length}</div><div class="pc-stat-l">联系过的人</div></div>
+    <div class="pc-stat"><div class="pc-stat-v">${totalCount}</div><div class="pc-stat-l">总互动次数</div></div>
+    <div class="pc-stat"><div class="pc-stat-v">${totalDur}</div><div class="pc-stat-l">总时长(分钟)</div></div>
+    <div class="pc-stat"><div class="pc-stat-v">${db.people.length ? Math.round(data.length/db.people.length*100) : 0}%</div><div class="pc-stat-l">覆盖率</div></div>`;
+  document.getElementById('stat-chart-count').innerHTML = renderBarChart(data, 'count', '次');
+  document.getElementById('stat-chart-duration').innerHTML = renderBarChart(data.filter(d=>d.duration>0), 'duration', '分钟');
+  document.getElementById('stat-table').innerHTML = renderStatTable(data);
+}
+document.getElementById('seg-stat-period').addEventListener('click', e=>{ const o=e.target.closest('.so'); if(!o) return; selectStatPeriod(o.dataset.v); });
+
+function renderTodos() {
+  const now=todayStr();
+  const active=db.todos.filter(t=>!t.done).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
+  const done=db.todos.filter(t=>t.done).sort((a,b)=>b.dueDate.localeCompare(a.dueDate)).slice(0,10);
+  let html='';
+  if (!active.length&&!done.length){html='<div class="empty-msg">还没有待办事项</div>';}
+  else{html+=`<div class="todo-list">${active.map(t=>todoItemH(t,now)).join('')}</div>`;if(done.length)html+=`<div class="done-divider">已完成</div><div class="todo-list">${done.map(t=>todoItemH(t,now)).join('')}</div>`;}
+  document.getElementById('todo-list').innerHTML=html;
+}
+function todoItemH(t,now) {
+  const p=t.personId?db.people.find(x=>x.id===t.personId):null;
+  const overdue=!t.done&&t.dueDate&&t.dueDate<now;
+  const dateLabel=t.dueDate?(t.dueDate===now?'今天':t.dueDate)+(t.dueTime?' '+t.dueTime:''):'';
+  return `<div class="todo-item ${t.done?'done-item':''}">
+    <button class="todo-cb ${t.done?'done':''}" data-tid="${t.id}" onclick="toggleTodo(event)">✓</button>
+    <div class="todo-body">
+      <div class="todo-text">${t.title}</div>
+      <div class="todo-meta">
+        ${dateLabel?`<span class="todo-date-tag ${overdue?'overdue':''}">📅 ${dateLabel}</span>`:''}
+        ${p?`<span class="todo-person-tag">● ${p.name}</span>`:''}
+        ${t.notes?`<span>${t.notes}</span>`:''}
+      </div>
+    </div>
+    <button class="todo-cal-btn" data-tid="${t.id}" onclick="todoCalClick(event)">📅</button>
+    <button class="todo-del" data-tid="${t.id}" onclick="todoDelClick(event)">×</button>
+  </div>`;
+}
+function toggleTodo(e){const t=db.todos.find(x=>x.id===e.currentTarget.dataset.tid);if(t){t.done=!t.done;save();renderTodos();buildPersonTabs();if(curPid&&t.personId===curPid)renderPersonPage(curPid);}}
+function todoCalClick(e){const t=db.todos.find(x=>x.id===e.currentTarget.dataset.tid);if(t)addToCalendar(t);}
+function todoDelClick(e){if(confirm('删除此待办？')){db.todos=db.todos.filter(x=>x.id!==e.currentTarget.dataset.tid);save();renderTodos();buildPersonTabs();}}
+function openTodoForm(tid){
+  editingTodoId=tid;
+  document.getElementById('todo-modal-ttl').textContent=tid?'编辑待办':'新增待办';
+  document.getElementById('td-del').style.display=tid?'inline-block':'none';
+  document.getElementById('td-outlook-btn').style.display=tid?'inline-block':'none';
+  const sel=document.getElementById('td-person');
+  sel.innerHTML='<option value="">— 不关联 —</option>'+db.people.sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  if(tid){const t=db.todos.find(x=>x.id===tid)||{};document.getElementById('td-title').value=t.title||'';document.getElementById('td-date').value=t.dueDate||'';document.getElementById('td-time').value=t.dueTime||'09:00';document.getElementById('td-person').value=t.personId||'';document.getElementById('td-note').value=t.notes||'';}
+  else{document.getElementById('td-title').value='';document.getElementById('td-date').value='';document.getElementById('td-time').value='09:00';document.getElementById('td-person').value='';document.getElementById('td-note').value='';}
+  openOv('ov-todo');
+}
+function saveTodo(){
+  const title=document.getElementById('td-title').value.trim();if(!title){alert('请输入事项');return;}
+  const data={title,dueDate:document.getElementById('td-date').value,dueTime:document.getElementById('td-time').value,personId:document.getElementById('td-person').value,notes:document.getElementById('td-note').value.trim(),createdDate:todayStr()};
+  if(editingTodoId){const t=db.todos.find(x=>x.id===editingTodoId);if(t)Object.assign(t,data);}
+  else db.todos.push({id:uid(),done:false,...data});
+  save();closeOv('ov-todo');renderTodos();buildPersonTabs();
+}
+function deleteTodo(){if(!confirm('删除？'))return;db.todos=db.todos.filter(x=>x.id!==editingTodoId);save();closeOv('ov-todo');renderTodos();buildPersonTabs();}
+function todoToOutlook(){const t=db.todos.find(x=>x.id===editingTodoId);if(t)addToCalendar(t);}
+
+// ── PERSON PAGE ──────────────────────────────────────────────
+function renderPersonPage(pid) {
+  const p = db.people.find(x=>x.id===pid); if(!p) return;
+  const pg = document.getElementById('pp-'+pid);
+  const allI = db.interactions.filter(i=>i.personId===pid);
+  const lastD = lastInt(pid); const days = daysSince(lastD);
+  const dTxt = days===null?'—':days===0?'今天':days===1?'昨天':days+'天前';
+  let streak=0; const t0=new Date(); t0.setHours(0,0,0,0);
+  for(let i=0;;i++){const d=new Date(t0);d.setDate(d.getDate()-i);if(allI.some(x=>x.date===d.toISOString().slice(0,10)))streak++;else break;}
+  const c = effectiveColor(pid); const bg = PALETTE[c]?.bg||'#8E8E8E';
+  const curTab = pInnerTab[pid]||'cal';
+  const pendingTodos = db.todos.filter(t=>!t.done&&t.personId===pid);
+  const manualTags = p.tags||[];
+  const detected = autoTraits(pid).filter(t=>!manualTags.includes(t));
+
+  // Pending todos strip
+  const pendingStrip = pendingTodos.length ? `
+    <div class="pending-strip">
+      <div class="pending-strip-ttl">⏳ 未完成待办 (${pendingTodos.length})</div>
+      ${pendingTodos.map(t=>`
+        <div class="pending-todo-row">
+          <button class="ptd-cb" data-tid="${t.id}" onclick="toggleTodoInline(event)"></button>
+          <span class="ptd-title">${t.title}</span>
+          ${t.dueDate?`<span class="ptd-date">${t.dueDate===todayStr()?'今天':t.dueDate}</span>`:''}
+          <span class="ptd-cal" onclick="addToCalendar(db.todos.find(x=>x.id==='${t.id}'))">📅</span>
+        </div>`).join('')}
+    </div>` : '';
+
+  // Tags section
+  const tagsHtml = `
+    <div class="pc-section">
+      <div class="pc-sec-ttl">🏷 标签</div>
+      <div class="tags-wrap" id="tags-wrap-${pid}">
+        ${manualTags.map(t=>`<span class="tag-chip manual">${escHtml(t)}<button class="tag-del" data-pid="${pid}" data-tag="${escHtml(t)}" onclick="removeTag(this)">×</button></span>`).join('')}
+        ${detected.map(t=>`<span class="tag-chip auto" title="从互动记录自动识别">${escHtml(t)}</span>`).join('')}
+        <button class="tag-add-btn" onclick="showTagInput('${pid}')">+ 添加</button>
+      </div>
+      <div id="tag-input-row-${pid}" style="display:none">
+        <div class="tag-input-row">
+          <input class="tag-fi" id="tag-fi-${pid}" list="tag-datalist" placeholder="输入标签，回车确认" onkeydown="tagKeydown(event,'${pid}')">
+          <button class="tag-ok" onclick="addTag('${pid}')">确认</button>
+          <button class="tag-cancel" onclick="hideTagInput('${pid}')">取消</button>
+        </div>
+      </div>
+      ${detected.length?`<div style="font-size:11px;color:var(--text-3);margin-top:8px">✦ 灰色标签为从互动记录自动识别的性格特征</div>`:''}
+    </div>`;
+
+  // Bio section
+  const bioHtml = `
+    <div class="pc-section">
+      <div class="pc-sec-ttl">📖 关于 TA</div>
+      <div id="bio-view-${pid}" class="bio-view ${!p.bio?'empty':''}" onclick="editBio('${pid}')">${p.bio?escHtml(p.bio):'点击添加备注、背景、印象...'}</div>
+      <div id="bio-edit-${pid}" style="display:none">
+        <textarea class="bio-edit-area" id="bio-ta-${pid}">${escHtml(p.bio||'')}</textarea>
+        <div class="bio-btns">
+          <button class="bio-save" onclick="saveBio('${pid}')">保存</button>
+          <button class="bio-cancel" onclick="cancelBio('${pid}')">取消</button>
+        </div>
+      </div>
+    </div>`;
+
+  // Basic info line (hometown / birthday) + group select
+  const basicBits = [p.hometown?`📍 ${escHtml(p.hometown)}`:'', p.birthday?`🎂 ${escHtml(p.birthday)}`:''].filter(Boolean).join('　');
+  const groupHtml = `
+    <div class="pc-section" style="padding-top:11px;padding-bottom:11px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px">
+        <span style="color:var(--text-3);flex-shrink:0">📁 分组</span>
+        <select class="og-sel" style="flex:1" onchange="movePersonToGroup('${pid}', this.value)">
+          <option value=""${!p.groupId?' selected':''}>未分组</option>
+          ${db.groups.map(g=>`<option value="${g.id}"${g.id===p.groupId?' selected':''}>${escHtml(g.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+
+  // Facts bullet points (synced from interaction "learned" notes)
+  const factsHtml = (p.facts && p.facts.length) ? `
+    <div class="pc-section">
+      <div class="pc-sec-ttl">🗒 资料笔记（来自互动记录，点击可编辑）</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        ${p.facts.map((f,idx)=>`
+          <div class="fact-row" id="fact-view-${pid}-${idx}" style="display:flex;align-items:flex-start;gap:6px;padding:5px 6px;border-radius:var(--r-sm);cursor:pointer" onclick="editFact('${pid}',${idx})">
+            <span style="font-size:13px;line-height:1.5;flex:1"><span style="color:var(--text-3);font-size:11px;margin-right:6px">${f.date}</span>${escHtml(f.text)}</span>
+            <button class="tag-del" style="color:var(--text-3)" onclick="event.stopPropagation();deleteFact('${pid}',${idx})" title="删除">×</button>
+          </div>
+          <div id="fact-edit-${pid}-${idx}" style="display:none;padding:4px 6px">
+            <textarea class="fi" id="fact-ta-${pid}-${idx}" style="min-height:50px;font-size:13px">${escHtml(f.text)}</textarea>
+            <div class="bio-btns">
+              <button class="bio-save" onclick="saveFact('${pid}',${idx})">保存</button>
+              <button class="bio-cancel" onclick="cancelFact('${pid}',${idx})">取消</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  // Stats + info
+  const statsHtml = `
+    <div class="pc-section">
+      <div class="pc-stats">
+        <div class="pc-stat"><div class="pc-stat-v">${allI.length}</div><div class="pc-stat-l">互动次数</div></div>
+        <div class="pc-stat"><div class="pc-stat-v">${dTxt}</div><div class="pc-stat-l">上次联系</div></div>
+        <div class="pc-stat"><div class="pc-stat-v">${streak}</div><div class="pc-stat-l">连续天数</div></div>
+        <div class="pc-stat"><div class="pc-stat-v">${allI.filter(i=>i.method).length}</div><div class="pc-stat-l">有记录次数</div></div>
+      </div>
+      ${(p.contact||p.notes)?`<div class="pc-info-grid">
+        ${p.contact?`<div class="pc-info-item"><div class="pc-info-lbl">联系方式</div><div class="pc-info-val">${escHtml(p.contact)}</div></div>`:''}
+        ${p.notes?`<div class="pc-info-item" style="${!p.contact?'grid-column:1/-1':''}"><div class="pc-info-lbl">备注</div><div class="pc-info-val">${escHtml(p.notes)}</div></div>`:''}
+      </div>`:``}
+    </div>`;
+
+  pg.innerHTML = `
+    <div class="profile-card">
+      <div class="pc-header">
+        <div class="av av-lg" style="background:${bg}">${p.name.charAt(0).toUpperCase()}</div>
+        <div class="pc-meta">
+          <div class="p-name">${escHtml(p.name)}</div>
+          ${p.status?`<div class="p-status-line">"${escHtml(p.status)}"</div>`:''}
+          ${p.role?`<div class="p-role">${escHtml(p.role)}</div>`:''}
+          ${basicBits?`<div class="p-role">${basicBits}</div>`:''}
+          <div class="p-badges">
+            ${p.type?`<span class="badge ${TB[p.type]||''}">${TL[p.type]||''}</span>`:''}
+            ${p.importance?`<span class="badge bi">${IL[p.importance]||''}</span>`:''}
+            <span class="badge" style="background:${bg};color:#fff">${PALETTE[c]?.label||''}</span>
+          </div>
+        </div>
+        <button class="pc-edit-btn" onclick="openPersonForm('${pid}')">编辑</button>
+      </div>
+      ${groupHtml}
+      ${pendingStrip}
+      ${tagsHtml}
+      ${bioHtml}
+      ${factsHtml}
+      ${statsHtml}
+    </div>
+    <div class="inner-tabs">
+      <button class="it ${curTab==='cal'?'active':''}" onclick="switchInner('${pid}','cal')">打卡日历</button>
+      <button class="it ${curTab==='log'?'active':''}" onclick="switchInner('${pid}','log')">互动详情</button>
+    </div>
+    <div class="inner-view ${curTab==='cal'?'on':''}" id="iv-cal-${pid}"><div id="cal-${pid}"></div></div>
+    <div class="inner-view ${curTab==='log'?'on':''}" id="iv-log-${pid}">
+      <div class="feed-top"><button class="btn-log" onclick="openLog('${pid}')">+ 记录互动</button></div>
+      <div id="feed-${pid}"></div>
+    </div>`;
+  renderCal(pid); renderFeed(pid);
+}
+
+function switchInner(pid,tab){
+  pInnerTab[pid]=tab;
+  document.querySelectorAll(`#pp-${pid} .it`).forEach((b,i)=>b.classList.toggle('active',(i===0&&tab==='cal')||(i===1&&tab==='log')));
+  document.getElementById(`iv-cal-${pid}`).classList.toggle('on',tab==='cal');
+  document.getElementById(`iv-log-${pid}`).classList.toggle('on',tab==='log');
+}
+
+// ── TAGS ──────────────────────────────────────────────────
+function escHtml(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showTagInput(pid) { document.getElementById('tag-input-row-'+pid).style.display='block'; document.getElementById('tag-fi-'+pid).focus(); }
+function hideTagInput(pid) { document.getElementById('tag-input-row-'+pid).style.display='none'; document.getElementById('tag-fi-'+pid).value=''; }
+function tagKeydown(e,pid) { if(e.key==='Enter'){e.preventDefault();addTag(pid);} if(e.key==='Escape')hideTagInput(pid); }
+function addTag(pid) {
+  const fi = document.getElementById('tag-fi-'+pid);
+  const val = fi.value.trim();
+  if (!val) { hideTagInput(pid); return; }
+  const p = db.people.find(x=>x.id===pid); if(!p) return;
+  if (!p.tags) p.tags=[];
+  if (!p.tags.includes(val)) {
+    p.tags.push(val);
+    if (!db.tagLibrary.includes(val)) db.tagLibrary.push(val);
+    save(); renderPersonPage(pid); renderSidebarTags();
+  } else { hideTagInput(pid); }
+}
+function removeTag(btn) {
+  const pid = btn.dataset.pid; const tag = btn.dataset.tag;
+  const p = db.people.find(x=>x.id===pid); if(!p||!p.tags) return;
+  p.tags = p.tags.filter(t=>t!==tag); save(); renderPersonPage(pid);
+}
+
+// ── TAG LIBRARY (sidebar) ──────────────────────────────────────
+function renderSidebarTags() {
+  const el = document.getElementById('sidebar-tag-list');
+  const dl = document.getElementById('tag-datalist');
+  if (dl) dl.innerHTML = db.tagLibrary.map(t=>`<option value="${escHtml(t)}">`).join('');
+  if (!el) return;
+  if (!db.tagLibrary.length) { el.innerHTML = '<span style="font-size:12px;color:var(--text-3)">还没有标签</span>'; return; }
+  el.innerHTML = [...db.tagLibrary].sort((a,b)=>a.localeCompare(b)).map(t=>
+    `<span class="sb-tag-chip">${escHtml(t)}<button onclick="deleteLibraryTag('${escHtml(t).replace(/'/g,"\\'")}')" title="删除标签">×</button></span>`
+  ).join('');
+}
+function addLibraryTag() {
+  const input = document.getElementById('sb-tag-input');
+  const val = input.value.trim();
+  if (!val) return;
+  if (!db.tagLibrary.includes(val)) { db.tagLibrary.push(val); save(); renderSidebarTags(); }
+  input.value = '';
+}
+function deleteLibraryTag(tag) {
+  if (!confirm(`删除标签"${tag}"？会从所有人物身上移除。`)) return;
+  db.tagLibrary = db.tagLibrary.filter(t=>t!==tag);
+  db.people.forEach(p=>{ if (p.tags) p.tags = p.tags.filter(t=>t!==tag); });
+  save(); renderSidebarTags();
+  if (curPid) renderPersonPage(curPid);
+}
+function toggleTodoInline(e) {
+  const tid = e.currentTarget.dataset.tid;
+  const t = db.todos.find(x=>x.id===tid); if(!t) return;
+  t.done=true; save(); buildPersonTabs();
+  if(curPid) renderPersonPage(curPid);
+}
+
+// ── BIO ──────────────────────────────────────────────────
+function editBio(pid) {
+  document.getElementById('bio-view-'+pid).style.display='none';
+  document.getElementById('bio-edit-'+pid).style.display='block';
+  document.getElementById('bio-ta-'+pid).focus();
+}
+function saveBio(pid) {
+  const val = document.getElementById('bio-ta-'+pid).value.trim();
+  const p = db.people.find(x=>x.id===pid); if(!p) return;
+  p.bio = val; save();
+  const view = document.getElementById('bio-view-'+pid);
+  view.textContent = val || '点击添加备注、背景、印象...';
+  view.className = 'bio-view' + (!val?' empty':'');
+  document.getElementById('bio-edit-'+pid).style.display='none';
+  view.style.display='block';
+}
+function cancelBio(pid) {
+  document.getElementById('bio-edit-'+pid).style.display='none';
+  document.getElementById('bio-view-'+pid).style.display='block';
+}
+
+function editFact(pid, idx) {
+  document.getElementById(`fact-view-${pid}-${idx}`).style.display = 'none';
+  const editEl = document.getElementById(`fact-edit-${pid}-${idx}`);
+  editEl.style.display = 'block';
+  document.getElementById(`fact-ta-${pid}-${idx}`).focus();
+}
+function saveFact(pid, idx) {
+  const val = document.getElementById(`fact-ta-${pid}-${idx}`).value.trim();
+  const p = db.people.find(x=>x.id===pid); if (!p || !p.facts || !p.facts[idx]) return;
+  if (!val) { deleteFact(pid, idx); return; }
+  p.facts[idx].text = val;
+  save();
+  renderPersonPage(pid);
+}
+function cancelFact(pid, idx) {
+  document.getElementById(`fact-edit-${pid}-${idx}`).style.display = 'none';
+  document.getElementById(`fact-view-${pid}-${idx}`).style.display = 'flex';
+}
+function deleteFact(pid, idx) {
+  const p = db.people.find(x=>x.id===pid); if (!p || !p.facts) return;
+  if (!confirm('删除这条资料笔记？')) return;
+  p.facts.splice(idx, 1);
+  save();
+  renderPersonPage(pid);
+}
+
+// ── CALENDAR ──────────────────────────────────────────────
+function renderCal(pid) {
+  const el=document.getElementById('cal-'+pid);if(!el)return;
+  const mo=pMonths[pid]||new Date();const yr=mo.getFullYear(),m=mo.getMonth();const t=todayStr();
+  const WD=['日','一','二','三','四','五','六'];
+  const firstWd=new Date(yr,m,1).getDay();const dim=new Date(yr,m+1,0).getDate();const prevD=new Date(yr,m,0).getDate();
+  let h=`<div class="cal-nav"><button class="cal-arr" onclick="movMo('${pid}',-1)">‹</button><div class="cal-ttl">${yr}年${m+1}月</div><button class="cal-arr" onclick="movMo('${pid}',1)">›</button></div><div class="cal-grid">${WD.map(w=>`<div class="cal-wday">${w}</div>`).join('')}`;
+  for(let i=firstWd-1;i>=0;i--)h+=`<div class="cal-day dim"><div class="d-num">${prevD-i}</div></div>`;
+  for(let d=1;d<=dim;d++){const ds=`${yr}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const chk=intsOnDate(pid,ds).length>0;h+=`<div class="cal-day ${ds===t?'is-today':''} ${chk?'checked':''}" data-pid="${pid}" data-date="${ds}" onclick="clickDay(this)"><div class="d-num">${d}</div>${chk?'<div class="d-chk">✓</div>':''}</div>`;}
+  const tail=(firstWd+dim)%7===0?0:7-(firstWd+dim)%7;for(let i=1;i<=tail;i++)h+=`<div class="cal-day dim"><div class="d-num">${i}</div></div>`;
+  el.innerHTML=h+'</div>';
+}
+function movMo(pid,dir){const c=pMonths[pid]||new Date();pMonths[pid]=new Date(c.getFullYear(),c.getMonth()+dir,1);renderCal(pid);}
+function clickDay(el){
+  const pid=el.dataset.pid,date=el.dataset.date;
+  const existing=intsOnDate(pid,date);
+  if(!existing.length){db.interactions.push({id:uid(),personId:pid,date,duration:'',method:'',notes:'',learned:''});save();renderCal(pid);renderPersonPage(pid);if(date===todayStr())renderToday();}
+  else{
+    dayPid=pid;dayDate=date;
+    const p=db.people.find(x=>x.id===pid);
+    document.getElementById('day-ttl').textContent=date+(p?'  —  '+p.name:'');
+    const det=existing.filter(i=>i.notes||i.learned||i.duration||i.method);
+    document.getElementById('day-info').innerHTML=det.length?det.map(i=>`${i.method?`<span class="int-method" style="margin-right:6px">${i.method}</span>`:''}${i.duration?`<span style="color:var(--teal);font-size:12px">⏱ ${i.duration}分钟</span>`:''}${i.notes?`<div style="margin-top:6px">${escHtml(i.notes)}</div>`:''}${i.learned?`<div style="font-size:12px;color:var(--purple);margin-top:5px">📌 ${escHtml(i.learned)}</div>`:''}`).join('<hr style="border:none;border-top:1px solid var(--border);margin:8px 0">'):'<span style="color:var(--text-3)">已打卡，暂无细节</span>';
+    openOv('ov-day');
+  }
+}
+function dayUncheck(){db.interactions=db.interactions.filter(i=>!(i.personId===dayPid&&i.date===dayDate));save();closeOv('ov-day');renderCal(dayPid);renderFeed(dayPid);renderPersonPage(dayPid);if(dayDate===todayStr())renderToday();}
+function dayAddLog(){closeOv('ov-day');openLog(dayPid,dayDate);}
+
+// ── FEED ──────────────────────────────────────────────
+function renderFeed(pid){
+  const el=document.getElementById('feed-'+pid);if(!el)return;
+  const items=db.interactions.filter(i=>i.personId===pid&&(i.notes||i.learned||i.duration||i.method)).sort((a,b)=>b.date.localeCompare(a.date));
+  el.innerHTML=items.length?items.map(i=>`<div class="int-entry"><div class="int-hdr"><span class="int-date">${i.date}</span>${i.method?`<span class="int-method">${i.method}</span>`:''}${i.duration?`<span class="int-dur">⏱ ${i.duration}分钟</span>`:''}${i.notes?`<button class="og-iconbtn" style="width:auto;padding:0 8px;margin-left:auto;font-size:11px" onclick="convertEntryToFacts('${i.id}')" title="把这条笔记拆成资料要点">📋 拆为要点</button>`:''}</div>${i.notes?`<div class="int-notes">${escHtml(i.notes)}</div>`:''}${i.learned?`<div class="int-learned">📌 ${escHtml(i.learned)}</div>`:''}</div>`).join(''):'<div class="empty-msg">点"+ 记录互动"填写每次联系的细节</div>';
+}
+function convertEntryToFacts(intId) {
+  const it = db.interactions.find(x=>x.id===intId); if (!it || !it.notes) return;
+  const p = db.people.find(x=>x.id===it.personId); if (!p) return;
+  const bullets = splitIntoFacts(it.notes);
+  const hometown = extractHometown(it.notes);
+  if (!p.facts) p.facts = [];
+  (bullets.length?bullets:[it.notes]).reverse().forEach(b => p.facts.unshift({ date: it.date, text: b }));
+  if (hometown && !p.hometown) p.hometown = hometown;
+  const removeOriginal = confirm(`已拆成 ${bullets.length||1} 条资料笔记加到资料卡。\n\n这条记录本身不是一次真正的互动，要不要把它从互动详情里删除？\n（点"确定"删除，点"取消"保留原记录）`);
+  if (removeOriginal) {
+    db.interactions = db.interactions.filter(x=>x.id!==intId);
+  }
+  save();
+  renderPersonPage(it.personId);
+}
+
+// ── LOG INTERACTION ──────────────────────────────────────────────
+function openLog(pid,prefillDate){
+  logPid=pid;const p=db.people.find(x=>x.id===pid);
+  document.getElementById('log-ttl').textContent='记录互动'+(p?' — '+p.name:'');
+  document.getElementById('log-date').value=prefillDate||todayStr();
+  ['log-dur','log-notes','log-learned','log-followup'].forEach(id=>document.getElementById(id).value='');
+  selMethod='见面';refreshSeg('seg-method',selMethod);
+  openOv('ov-log');
+}
+function saveLog(){
+  const date=document.getElementById('log-date').value;const dur=document.getElementById('log-dur').value;
+  const notes=document.getElementById('log-notes').value.trim();const learned=document.getElementById('log-learned').value.trim();const followup=document.getElementById('log-followup').value.trim();
+  const bare=db.interactions.findIndex(i=>i.personId===logPid&&i.date===date&&!i.notes&&!i.learned&&!i.duration&&!i.method);
+  if(bare>=0)db.interactions.splice(bare,1);
+  db.interactions.push({id:uid(),personId:logPid,date,duration:dur,method:selMethod,notes,learned});
+  if(learned){const p=db.people.find(x=>x.id===logPid);if(p){if(!p.facts)p.facts=[];p.facts.unshift({date,text:learned});}}
+  save();closeOv('ov-log');
+  renderPersonPage(logPid);
+  if(date===todayStr())renderToday();
+  switchInner(logPid,'log');
+  const detected=followup||detectFollowup(notes);
+  if(detected)setTimeout(()=>maybeShowFollowup(logPid,notes,followup),200);
+}
+
+// ── ADD/EDIT PERSON ──────────────────────────────────────────────
+function openPersonForm(pid){
+  editingPid=pid;
+  document.getElementById('pf-ttl').textContent=pid?'编辑人物':'添加人物';
+  document.getElementById('pf-del').style.display=pid?'inline-block':'none';
+  if(pid){const p=db.people.find(x=>x.id===pid)||{};document.getElementById('pf-name').value=p.name||'';document.getElementById('pf-role').value=p.role||'';document.getElementById('pf-contact').value=p.contact||'';document.getElementById('pf-notes').value=p.notes||'';document.getElementById('pf-status').value=p.status||'';document.getElementById('pf-hometown').value=p.hometown||'';document.getElementById('pf-birthday').value=p.birthday||'';selColor=p.color||'gray';selType=p.type||'work';selImp=p.importance||2;}
+  else{['pf-name','pf-role','pf-contact','pf-notes','pf-status','pf-hometown','pf-birthday'].forEach(id=>document.getElementById(id).value='');selColor='gray';selType='work';selImp=2;}
+  refreshColorPicker();refreshSeg('seg-type',selType);refreshSeg('seg-imp',String(selImp));
+  openOv('ov-person');
+}
+function refreshColorPicker(){document.querySelectorAll('#color-swatches .cs').forEach(el=>el.classList.toggle('active',el.dataset.c===selColor));}
+document.getElementById('color-swatches').addEventListener('click',e=>{const cs=e.target.closest('.cs');if(!cs)return;selColor=cs.dataset.c;refreshColorPicker();});
+
+function savePerson(){
+  const name=document.getElementById('pf-name').value.trim();if(!name){alert('请输入姓名');return;}
+  try{
+    if(editingPid){const p=db.people.find(x=>x.id===editingPid);if(p){p.name=name;p.role=document.getElementById('pf-role').value.trim();p.contact=document.getElementById('pf-contact').value.trim();p.notes=document.getElementById('pf-notes').value.trim();p.status=document.getElementById('pf-status').value.trim();p.hometown=document.getElementById('pf-hometown').value.trim();p.birthday=document.getElementById('pf-birthday').value.trim();p.color=selColor;p.type=selType;p.importance=selImp;}}
+    else { const maxOrder=db.people.reduce((m,x)=>Math.max(m,x.order||0),0); db.people.push({id:uid(),name,role:document.getElementById('pf-role').value.trim(),contact:document.getElementById('pf-contact').value.trim(),notes:document.getElementById('pf-notes').value.trim(),status:document.getElementById('pf-status').value.trim(),hometown:document.getElementById('pf-hometown').value.trim(),birthday:document.getElementById('pf-birthday').value.trim(),color:selColor,type:selType,importance:selImp,facts:[],tags:[],bio:'',groupId:null,order:maxOrder+1}); }
+    save();closeOv('ov-person');buildPersonTabs();
+    if(editingPid&&curPid===editingPid)renderPersonPage(editingPid);
+    renderToday();
+  }catch(e){alert('保存失败：'+e.message);}
+}
+function deletePerson(){
+  if(!confirm('确认删除？'))return;
+  db.people=db.people.filter(p=>p.id!==editingPid);db.interactions=db.interactions.filter(i=>i.personId!==editingPid);
+  const pg=document.getElementById('pp-'+editingPid);if(pg)pg.remove();
+  save();closeOv('ov-person');buildPersonTabs();gotoToday();
+}
+
+// ── SEG HELPER ──────────────────────────────────────────────
+function refreshSeg(segId,val){
+  document.querySelectorAll(`#${segId} .so`).forEach(o=>{
+    const match=o.dataset.v===val;
+    o.className='so'+(match?' sel-'+val.replace(/\s+/g,'')+(segId==='seg-method'?' sel':''):'');
+  });
+}
+document.getElementById('seg-type').addEventListener('click',e=>{const o=e.target.closest('.so');if(!o)return;selType=o.dataset.v;refreshSeg('seg-type',selType);});
+document.getElementById('seg-imp').addEventListener('click',e=>{const o=e.target.closest('.so');if(!o)return;selImp=parseInt(o.dataset.v);refreshSeg('seg-imp',String(selImp));});
+document.getElementById('seg-method').addEventListener('click',e=>{const o=e.target.closest('.so');if(!o)return;selMethod=o.dataset.v;refreshSeg('seg-method',selMethod);});
+
+// ── OVERLAY ──────────────────────────────────────────────
+function openOv(id){document.getElementById(id).classList.add('on');}
+function closeOv(id){document.getElementById(id).classList.remove('on');}
+document.querySelectorAll('.ov').forEach(ov=>{
+  let downOnOverlay = false;
+  ov.addEventListener('pointerdown', e=>{ downOnOverlay = (e.target === ov); });
+  ov.addEventListener('click', e=>{ if (e.target === ov && downOnOverlay) closeOv(ov.id); downOnOverlay = false; });
+});
+
+// ── INIT ──────────────────────────────────────────────────
+(async function init() {
+  await load();
+  buildPersonTabs();
+  renderSidebarTags();
+  renderToday();
+})();
+</script>
+</body>
+</html>
