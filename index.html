@@ -595,6 +595,7 @@ textarea.fi { resize: vertical; min-height: 68px; }
       <div class="hint">仅存在本设备，不会上传到任何地方</div>
     </div>
     <div id="cfg-status" style="font-size:13px;min-height:20px;margin-bottom:4px"></div>
+    <button class="mbtn" style="width:100%;margin-bottom:10px" onclick="copySetupLink()">🔗 生成配置链接（给新设备/新网址用，免手动输入）</button>
     <div class="mfoot">
       <button class="mbtn-del" id="cfg-clear-btn" onclick="clearCloud()" style="display:none">清除配置</button>
       <button class="mbtn" onclick="closeOv('ov-settings')">取消</button>
@@ -938,6 +939,34 @@ function clearCloud() {
   localStorage.removeItem('relmgr_cloud');
   closeOv('ov-settings');
   setBadge('local');
+}
+
+// ── CONFIG TRANSFER LINK (move JSONBin/Claude config to a new device/domain) ──
+function copySetupLink() {
+  const cfg = getCloudCfg();
+  if (!cfg || !cfg.binId || !cfg.apiKey) { alert('请先在上面配置好云同步（Bin ID + Master Key），再生成链接'); return; }
+  const payload = { binId: cfg.binId, apiKey: cfg.apiKey };
+  const ck = getClaudeKey();
+  if (ck) payload.claudeKey = ck;
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const url = `${location.origin}${location.pathname}?setup=${encoded}`;
+  const finish = () => alert('配置链接已复制！\n\n在新设备/新网址的浏览器里打开这个链接，会自动连上同一份数据，不用再手动输入。\n\n（如果新网址跟当前域名不同，记得把链接里的域名部分换成目标网址）');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(finish).catch(()=>prompt('复制失败，手动复制这个链接：', url));
+  } else {
+    prompt('复制这个链接：', url);
+  }
+}
+function tryApplySetupParam() {
+  const params = new URLSearchParams(location.search);
+  const setup = params.get('setup');
+  if (!setup) return;
+  try {
+    const payload = JSON.parse(decodeURIComponent(escape(atob(setup))));
+    if (payload.binId && payload.apiKey) setCloudCfg({ binId: payload.binId, apiKey: payload.apiKey });
+    if (payload.claudeKey) setClaudeKey(payload.claudeKey);
+  } catch(e) {}
+  history.replaceState({}, '', location.pathname);
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function todayStr() { return new Date().toISOString().slice(0,10); }
@@ -2211,6 +2240,7 @@ document.querySelectorAll('.ov').forEach(ov=>{
 
 // ── INIT ──────────────────────────────────────────────────
 (async function init() {
+  tryApplySetupParam();
   await load();
   buildPersonTabs();
   renderSidebarTags();
