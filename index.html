@@ -737,26 +737,45 @@ function normDB() {
   db.tagLibrary = [...usedTags];
 }
 
+async function fetchCloudOnce() {
+  const cfg = getCloudCfg();
+  const r = await fetchWithTimeout(cloudUrl(cfg.binId), { headers: cloudHeaders(cfg.apiKey) }, 15000);
+  if (!r.ok) throw new Error('http '+r.status);
+  const json = await r.json();
+  const record = json.record || json;
+  if (!record || !(record.people || record.interactions || record.todos)) throw new Error('empty record');
+  return record;
+}
+let cloudLoadFailed = false;
 async function load() {
+  cloudLoadFailed = false;
   const cfg = getCloudCfg();
   if (cfg && cfg.binId && cfg.apiKey) {
-    try {
-      const r = await fetchWithTimeout(cloudUrl(cfg.binId), { headers: cloudHeaders(cfg.apiKey) });
-      if (r.ok) {
-        const json = await r.json();
-        const record = json.record || json;
-        if (record && (record.people || record.interactions || record.todos)) {
-          db = record; normDB(); setBadge('cloud'); return;
-        }
+    for (let attempt=0; attempt<3; attempt++) {
+      try {
+        const record = await fetchCloudOnce();
+        db = record; normDB(); setBadge('cloud');
+        try { localStorage.setItem('relmgr', JSON.stringify(db)); } catch(e) {}
+        return;
+      } catch(e) {
+        if (attempt<2) await new Promise(r=>setTimeout(r, 800*(attempt+1)));
       }
-    } catch(e) {}
+    }
     setBadge('error');
+    cloudLoadFailed = true;
   } else {
     setBadge('local');
   }
-  // Fallback: localStorage
+  // Fallback: localStorage (only reached if cloud is unconfigured or failed 3 attempts)
   try { const r = localStorage.getItem('relmgr'); if (r) db = JSON.parse(r); } catch(e) {}
   normDB();
+}
+async function retryLoad() {
+  setBadge('local');
+  document.getElementById('sidebar-people').innerHTML = '<div class="og-empty">重新连接中…</div>';
+  await load();
+  buildPersonTabs(); renderSidebarTags();
+  refreshCurrentPage();
 }
 
 function save() {
@@ -1304,7 +1323,11 @@ function buildPersonTabs() {
     if (!collapsed.has(g.id)) ppl.forEach(appendPersonBtn);
   });
 
-  if (!db.people.length) nav.innerHTML = '<div class="og-empty">还没有人物</div>';
+  if (!db.people.length) {
+    nav.innerHTML = cloudLoadFailed
+      ? '<div class="og-empty">⚠️ 云端连接失败，显示的不是最新数据<br><button class="mbtn" style="margin-top:8px;font-size:12px;padding:5px 12px" onclick="retryLoad()">🔄 重试</button></div>'
+      : '<div class="og-empty">还没有人物</div>';
+  }
   highlightActiveSidebar();
   applySidebarFilter();
 }
