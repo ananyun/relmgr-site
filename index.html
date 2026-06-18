@@ -2357,13 +2357,24 @@ document.querySelectorAll('.ov').forEach(ov=>{
 });
 
 // ── BIRTHDAY REMINDERS (auto-generated todos, 1 week + 1 day before) ──
-function parseBirthdayMonthDay(birthday) {
-  if (!birthday) return null;
-  const m = birthday.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]/);
-  if (!m) return null;
-  const month = parseInt(m[1]), day = parseInt(m[2]);
+function validMonthDay(mo, da) {
+  const month = parseInt(mo), day = parseInt(da);
   if (month<1||month>12||day<1||day>31) return null;
   return { month, day };
+}
+function parseBirthdayMonthDay(birthday) {
+  if (!birthday) return null;
+  let m;
+  // 1995年3月15日 / 1995-3-15 / 1995.3.15
+  m = birthday.match(/\d{4}[年\-.\/](\d{1,2})[月\-.\/](\d{1,2})[日号]?/);
+  if (m) { const r = validMonthDay(m[1], m[2]); if (r) return r; }
+  // 3月15日
+  m = birthday.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]/);
+  if (m) { const r = validMonthDay(m[1], m[2]); if (r) return r; }
+  // 7.15 / 7/15 / 7-15 (no preceding 4-digit year)
+  m = birthday.match(/(?:^|[^\d])(\d{1,2})[.\/\-](\d{1,2})(?:[^\d]|$)/);
+  if (m) { const r = validMonthDay(m[1], m[2]); if (r) return r; }
+  return null;
 }
 function checkBirthdayReminders() {
   const today = new Date(); today.setHours(0,0,0,0);
