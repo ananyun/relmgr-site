@@ -295,6 +295,7 @@ textarea.fi { resize: vertical; min-height: 68px; }
         <span style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em">人物</span>
         <button class="og-iconbtn" onclick="openOrgManager()" title="管理分组与排序">☰</button>
       </div>
+      <input class="fi" id="sidebar-search" placeholder="🔍 搜索人物..." style="font-size:12px;padding:6px 9px;margin-bottom:8px" oninput="applySidebarFilter()">
       <div id="sidebar-people"></div>
       <button class="sb-add-btn" onclick="openPersonForm(null)">+ 添加人物</button>
     </div>
@@ -317,6 +318,10 @@ textarea.fi { resize: vertical; min-height: 68px; }
 <div class="page on" id="pg-today">
   <div class="t-date" id="hdr-date"></div>
   <div class="t-sub" id="hdr-sub"></div>
+  <div class="fg">
+    <input class="fi" id="today-search" placeholder="🔍 搜索人物..." oninput="filterTodaySearch()">
+    <div id="today-search-results" style="display:none;margin-top:8px"></div>
+  </div>
   <div class="t-sec">
     <button class="quickcap-btn" onclick="openQuickCapture()">🎙️ 快速记录 — 说一句话，自动识别人物 / 内容 / 待办</button>
   </div>
@@ -412,7 +417,7 @@ textarea.fi { resize: vertical; min-height: 68px; }
       <div class="fg"><label class="flbl">来自哪里</label><input class="fi" id="pf-hometown" placeholder="如：北京"></div>
       <div class="fg"><label class="flbl">生日</label><input class="fi" id="pf-birthday" placeholder="如：3月15日"></div>
     </div>
-    <div class="fg"><label class="flbl">备注</label><textarea class="fi" id="pf-notes" placeholder="初始信息、背景..."></textarea></div>
+    <div class="fg"><label class="flbl">关于 TA</label><textarea class="fi" id="pf-bio" placeholder="初始信息、背景、印象..."></textarea></div>
     <div class="mfoot">
       <button class="mbtn-del" id="pf-del" onclick="deletePerson()" style="display:none">删除</button>
       <button class="mbtn" onclick="closeOv('ov-person')">取消</button>
@@ -451,6 +456,7 @@ textarea.fi { resize: vertical; min-height: 68px; }
       <div class="hint">→ 保存后自动弹出创建提醒</div>
     </div>
     <div class="mfoot">
+      <button class="mbtn-del" id="log-del" onclick="deleteLogEntry()" style="display:none">删除</button>
       <button class="mbtn" onclick="closeOv('ov-log')">取消</button>
       <button class="mbtn-s" onclick="saveLog()">保存</button>
     </div>
@@ -718,6 +724,7 @@ function normDB() {
     if (!p.color) p.color = 'gray';
     if (!p.tags) p.tags = [];
     if (!p.bio) p.bio = '';
+    if (p.notes) { p.bio = p.bio ? p.bio + '\n' + p.notes : p.notes; p.notes = ''; }
     if (p.emoji) delete p.emoji;
     if (p.groupId === undefined) p.groupId = null;
     if (p.order === undefined || p.order === null) p.order = ++maxOrder;
@@ -969,7 +976,8 @@ function tryApplySetupParam() {
   history.replaceState({}, '', location.pathname);
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-function todayStr() { return new Date().toISOString().slice(0,10); }
+function fmtDate(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function todayStr() { return fmtDate(new Date()); }
 function daysSince(d) { if (!d) return null; return Math.floor((Date.now()-new Date(d))/86400000); }
 function lastInt(pid) {
   const a = db.interactions.filter(i=>i.personId===pid).sort((a,b)=>b.date.localeCompare(a.date));
@@ -983,15 +991,15 @@ function getWeekRange() {
   const diffToMon = day===0 ? -6 : 1-day;
   const mon = new Date(now); mon.setDate(now.getDate()+diffToMon);
   const sun = new Date(mon); sun.setDate(mon.getDate()+6);
-  return { start: mon.toISOString().slice(0,10), end: sun.toISOString().slice(0,10) };
+  return { start: fmtDate(mon), end: fmtDate(sun) };
 }
 function getStatsRange(period) {
   const now = new Date(); now.setHours(0,0,0,0);
-  if (period === 'day') { const s = now.toISOString().slice(0,10); return { start:s, end:s }; }
+  if (period === 'day') { const s = fmtDate(now); return { start:s, end:s }; }
   if (period === 'month') {
     const s = new Date(now.getFullYear(), now.getMonth(), 1);
     const e = new Date(now.getFullYear(), now.getMonth()+1, 0);
-    return { start: s.toISOString().slice(0,10), end: e.toISOString().slice(0,10) };
+    return { start: fmtDate(s), end: fmtDate(e) };
   }
   return getWeekRange();
 }
@@ -1037,14 +1045,14 @@ function autoTraits(pid) {
   const p = db.people.find(x=>x.id===pid);
   const allText = [
     ...ints.map(i=>[i.notes||'',i.learned||''].join(' ')),
-    p ? [p.notes||'',p.bio||''].join(' ') : ''
+    p ? (p.bio||'') : ''
   ].join(' ');
   if (!allText.trim()) return [];
   return TRAIT_RULES.filter(r=>r.re.test(allText)).map(r=>r.label);
 }
 
 // ── STATE ──────────────────────────────────────────────────
-let curPid=null, editingPid=null, logPid=null;
+let curPid=null, editingPid=null, logPid=null, editingLogId=null;
 let dayPid=null, dayDate=null;
 let editingTodoId=null, fuPid=null;
 let selColor='gray', selType='work', selImp=2, selMethod='见面';
@@ -1161,7 +1169,7 @@ function parseFollowupDateTime(text) {
     }
   }
 
-  return { date: date ? date.toISOString().slice(0,10) : null, time };
+  return { date: date ? fmtDate(date) : null, time };
 }
 
 function maybeShowFollowup(pid, notes, followupText) {
@@ -1176,7 +1184,7 @@ function maybeShowFollowup(pid, notes, followupText) {
     document.getElementById('fu-date').value = parsed.date;
   } else {
     const tom = new Date(); tom.setDate(tom.getDate()+1);
-    document.getElementById('fu-date').value = tom.toISOString().slice(0,10);
+    document.getElementById('fu-date').value = fmtDate(tom);
   }
   // Time: only fill if actually detected in text
   document.getElementById('fu-time').value = parsed.time || '';
@@ -1211,7 +1219,7 @@ function addToCalendar(todo) {
     allday  = false;
   } else {
     const nextDate = new Date(todo.dueDate||todayStr()); nextDate.setDate(nextDate.getDate()+1);
-    const nd = nextDate.toISOString().slice(0,10).replace(/-/g,'');
+    const nd = fmtDate(nextDate).replace(/-/g,'');
     dtStart = `DTSTART;VALUE=DATE:${date}`;
     dtEnd   = `DTEND;VALUE=DATE:${nd}`;
     allday  = true;
@@ -1297,6 +1305,40 @@ function buildPersonTabs() {
 
   if (!db.people.length) nav.innerHTML = '<div class="og-empty">还没有人物</div>';
   highlightActiveSidebar();
+  applySidebarFilter();
+}
+function applySidebarFilter() {
+  const input = document.getElementById('sidebar-search');
+  if (!input) return;
+  const q = input.value.trim().toLowerCase();
+  const nav = document.getElementById('sidebar-people');
+  let lastLabel = null, labelHasVisible = false;
+  [...nav.children].forEach(el => {
+    if (el.dataset.glabel) {
+      if (lastLabel) lastLabel.style.display = labelHasVisible ? '' : 'none';
+      lastLabel = el; labelHasVisible = false;
+    } else if (el.classList.contains('sb-person-row')) {
+      const match = !q || el.textContent.toLowerCase().includes(q);
+      el.style.display = match ? '' : 'none';
+      if (match) labelHasVisible = true;
+    }
+  });
+  if (lastLabel) lastLabel.style.display = labelHasVisible ? '' : 'none';
+}
+function filterTodaySearch() {
+  const q = document.getElementById('today-search').value.trim().toLowerCase();
+  const results = document.getElementById('today-search-results');
+  if (!q) { results.style.display = 'none'; results.innerHTML = ''; return; }
+  const matches = db.people.filter(p=>p.name.toLowerCase().includes(q));
+  results.style.display = 'block';
+  if (!matches.length) { results.innerHTML = '<div class="empty-msg">没有匹配的人物</div>'; return; }
+  results.innerHTML = matches.map(p=>{
+    const c = effectiveColor(p.id); const bg = PALETTE[c]?.bg||'#8E8E8E';
+    return `<div class="t-row" onclick="showPerson('${p.id}')">
+      <div class="av av-md" style="background:${bg}">${p.name.charAt(0).toUpperCase()}</div>
+      <div class="tr-info"><div class="tr-name">${escHtml(p.name)}</div><div class="tr-status">${escHtml(p.status||p.role||'')}</div></div>
+    </div>`;
+  }).join('');
 }
 function highlightActiveSidebar() {
   document.querySelectorAll('.sb-nav-link, .sb-person-row').forEach(el=>el.classList.remove('active'));
@@ -1550,9 +1592,9 @@ function smartParseEntry(text) {
     if (p.name && text.includes(p.name) && p.name.length > bestLen) { matchedPerson = p; bestLen = p.name.length; }
   });
   let date = todayStr();
-  if (/大前天/.test(text)) { const dd=new Date(); dd.setDate(dd.getDate()-3); date=dd.toISOString().slice(0,10); }
-  else if (/前天/.test(text)) { const dd=new Date(); dd.setDate(dd.getDate()-2); date=dd.toISOString().slice(0,10); }
-  else if (/昨天|昨日/.test(text)) { const dd=new Date(); dd.setDate(dd.getDate()-1); date=dd.toISOString().slice(0,10); }
+  if (/大前天/.test(text)) { const dd=new Date(); dd.setDate(dd.getDate()-3); date=fmtDate(dd); }
+  else if (/前天/.test(text)) { const dd=new Date(); dd.setDate(dd.getDate()-2); date=fmtDate(dd); }
+  else if (/昨天|昨日/.test(text)) { const dd=new Date(); dd.setDate(dd.getDate()-1); date=fmtDate(dd); }
   const followupText = detectFollowup(text);
   const guessedName = matchedPerson ? null : guessNewPersonName(text);
   const isEvent = INTERACTION_RE.test(text);
@@ -1867,7 +1909,7 @@ function renderPersonPage(pid) {
   const lastD = lastInt(pid); const days = daysSince(lastD);
   const dTxt = days===null?'—':days===0?'今天':days===1?'昨天':days+'天前';
   let streak=0; const t0=new Date(); t0.setHours(0,0,0,0);
-  for(let i=0;;i++){const d=new Date(t0);d.setDate(d.getDate()-i);if(allI.some(x=>x.date===d.toISOString().slice(0,10)))streak++;else break;}
+  for(let i=0;;i++){const d=new Date(t0);d.setDate(d.getDate()-i);if(allI.some(x=>x.date===fmtDate(d)))streak++;else break;}
   const c = effectiveColor(pid); const bg = PALETTE[c]?.bg||'#8E8E8E';
   const curTab = pInnerTab[pid]||'cal';
   const pendingTodos = db.todos.filter(t=>!t.done&&t.personId===pid);
@@ -1962,9 +2004,8 @@ function renderPersonPage(pid) {
         <div class="pc-stat"><div class="pc-stat-v">${streak}</div><div class="pc-stat-l">连续天数</div></div>
         <div class="pc-stat"><div class="pc-stat-v">${allI.filter(i=>i.method).length}</div><div class="pc-stat-l">有记录次数</div></div>
       </div>
-      ${(p.contact||p.notes)?`<div class="pc-info-grid">
-        ${p.contact?`<div class="pc-info-item"><div class="pc-info-lbl">联系方式</div><div class="pc-info-val">${escHtml(p.contact)}</div></div>`:''}
-        ${p.notes?`<div class="pc-info-item" style="${!p.contact?'grid-column:1/-1':''}"><div class="pc-info-lbl">备注</div><div class="pc-info-val">${escHtml(p.notes)}</div></div>`:''}
+      ${p.contact?`<div class="pc-info-grid">
+        <div class="pc-info-item" style="grid-column:1/-1"><div class="pc-info-lbl">联系方式</div><div class="pc-info-val">${escHtml(p.contact)}</div></div>
       </div>`:``}
     </div>`;
 
@@ -2146,7 +2187,7 @@ function dayAddLog(){closeOv('ov-day');openLog(dayPid,dayDate);}
 function renderFeed(pid){
   const el=document.getElementById('feed-'+pid);if(!el)return;
   const items=db.interactions.filter(i=>i.personId===pid&&(i.notes||i.learned||i.duration||i.method)).sort((a,b)=>b.date.localeCompare(a.date));
-  el.innerHTML=items.length?items.map(i=>`<div class="int-entry"><div class="int-hdr"><span class="int-date">${i.date}</span>${i.method?`<span class="int-method">${i.method}</span>`:''}${i.duration?`<span class="int-dur">⏱ ${i.duration}分钟</span>`:''}${i.notes?`<button class="og-iconbtn" style="width:auto;padding:0 8px;margin-left:auto;font-size:11px" onclick="convertEntryToFacts('${i.id}')" title="把这条笔记拆成资料要点">📋 拆为要点</button>`:''}</div>${i.notes?`<div class="int-notes">${escHtml(i.notes)}</div>`:''}${i.learned?`<div class="int-learned">📌 ${escHtml(i.learned)}</div>`:''}</div>`).join(''):'<div class="empty-msg">点"+ 记录互动"填写每次联系的细节</div>';
+  el.innerHTML=items.length?items.map(i=>`<div class="int-entry" style="cursor:pointer" onclick="editLogEntry('${i.id}')"><div class="int-hdr"><span class="int-date">${i.date}</span>${i.method?`<span class="int-method">${i.method}</span>`:''}${i.duration?`<span class="int-dur">⏱ ${i.duration}分钟</span>`:''}${i.notes?`<button class="og-iconbtn" style="width:auto;padding:0 8px;margin-left:auto;font-size:11px" onclick="event.stopPropagation();convertEntryToFacts('${i.id}')" title="把这条笔记拆成资料要点">📋 拆为要点</button>`:''}</div>${i.notes?`<div class="int-notes">${escHtml(i.notes)}</div>`:''}${i.learned?`<div class="int-learned">📌 ${escHtml(i.learned)}</div>`:''}</div>`).join(''):'<div class="empty-msg">点"+ 记录互动"填写每次联系的细节</div>';
 }
 function convertEntryToFacts(intId) {
   const it = db.interactions.find(x=>x.id===intId); if (!it || !it.notes) return;
@@ -2166,19 +2207,47 @@ function convertEntryToFacts(intId) {
 
 // ── LOG INTERACTION ──────────────────────────────────────────────
 function openLog(pid,prefillDate){
-  logPid=pid;const p=db.people.find(x=>x.id===pid);
+  logPid=pid; editingLogId=null; const p=db.people.find(x=>x.id===pid);
   document.getElementById('log-ttl').textContent='记录互动'+(p?' — '+p.name:'');
   document.getElementById('log-date').value=prefillDate||todayStr();
   ['log-dur','log-notes','log-learned','log-followup'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('log-del').style.display='none';
   selMethod='见面';refreshSeg('seg-method',selMethod);
   openOv('ov-log');
+}
+function editLogEntry(intId){
+  const it = db.interactions.find(x=>x.id===intId); if(!it) return;
+  logPid = it.personId; editingLogId = intId;
+  const p=db.people.find(x=>x.id===it.personId);
+  document.getElementById('log-ttl').textContent='编辑互动'+(p?' — '+p.name:'');
+  document.getElementById('log-date').value = it.date;
+  document.getElementById('log-dur').value = it.duration||'';
+  document.getElementById('log-notes').value = it.notes||'';
+  document.getElementById('log-learned').value = it.learned||'';
+  document.getElementById('log-followup').value = '';
+  document.getElementById('log-del').style.display='inline-block';
+  selMethod = it.method || '见面'; refreshSeg('seg-method',selMethod);
+  openOv('ov-log');
+}
+function deleteLogEntry(){
+  if(!editingLogId) return;
+  if(!confirm('删除这条互动记录？')) return;
+  const pid = logPid;
+  db.interactions = db.interactions.filter(x=>x.id!==editingLogId);
+  save(); closeOv('ov-log');
+  renderPersonPage(pid); renderToday();
 }
 function saveLog(){
   const date=document.getElementById('log-date').value;const dur=document.getElementById('log-dur').value;
   const notes=document.getElementById('log-notes').value.trim();const learned=document.getElementById('log-learned').value.trim();const followup=document.getElementById('log-followup').value.trim();
-  const bare=db.interactions.findIndex(i=>i.personId===logPid&&i.date===date&&!i.notes&&!i.learned&&!i.duration&&!i.method);
-  if(bare>=0)db.interactions.splice(bare,1);
-  db.interactions.push({id:uid(),personId:logPid,date,duration:dur,method:selMethod,notes,learned});
+  if(editingLogId){
+    const it = db.interactions.find(x=>x.id===editingLogId);
+    if(it){ it.date=date; it.duration=dur; it.method=selMethod; it.notes=notes; it.learned=learned; }
+  } else {
+    const bare=db.interactions.findIndex(i=>i.personId===logPid&&i.date===date&&!i.notes&&!i.learned&&!i.duration&&!i.method);
+    if(bare>=0)db.interactions.splice(bare,1);
+    db.interactions.push({id:uid(),personId:logPid,date,duration:dur,method:selMethod,notes,learned});
+  }
   if(learned){const p=db.people.find(x=>x.id===logPid);if(p){if(!p.facts)p.facts=[];p.facts.unshift({date,text:learned});}}
   save();closeOv('ov-log');
   renderPersonPage(logPid);
@@ -2193,8 +2262,8 @@ function openPersonForm(pid){
   editingPid=pid;
   document.getElementById('pf-ttl').textContent=pid?'编辑人物':'添加人物';
   document.getElementById('pf-del').style.display=pid?'inline-block':'none';
-  if(pid){const p=db.people.find(x=>x.id===pid)||{};document.getElementById('pf-name').value=p.name||'';document.getElementById('pf-role').value=p.role||'';document.getElementById('pf-contact').value=p.contact||'';document.getElementById('pf-notes').value=p.notes||'';document.getElementById('pf-status').value=p.status||'';document.getElementById('pf-hometown').value=p.hometown||'';document.getElementById('pf-birthday').value=p.birthday||'';selColor=p.color||'gray';selType=p.type||'work';selImp=p.importance||2;}
-  else{['pf-name','pf-role','pf-contact','pf-notes','pf-status','pf-hometown','pf-birthday'].forEach(id=>document.getElementById(id).value='');selColor='gray';selType='work';selImp=2;}
+  if(pid){const p=db.people.find(x=>x.id===pid)||{};document.getElementById('pf-name').value=p.name||'';document.getElementById('pf-role').value=p.role||'';document.getElementById('pf-contact').value=p.contact||'';document.getElementById('pf-bio').value=p.bio||'';document.getElementById('pf-status').value=p.status||'';document.getElementById('pf-hometown').value=p.hometown||'';document.getElementById('pf-birthday').value=p.birthday||'';selColor=p.color||'gray';selType=p.type||'work';selImp=p.importance||2;}
+  else{['pf-name','pf-role','pf-contact','pf-bio','pf-status','pf-hometown','pf-birthday'].forEach(id=>document.getElementById(id).value='');selColor='gray';selType='work';selImp=2;}
   refreshColorPicker();refreshSeg('seg-type',selType);refreshSeg('seg-imp',String(selImp));
   openOv('ov-person');
 }
@@ -2204,8 +2273,8 @@ document.getElementById('color-swatches').addEventListener('click',e=>{const cs=
 function savePerson(){
   const name=document.getElementById('pf-name').value.trim();if(!name){alert('请输入姓名');return;}
   try{
-    if(editingPid){const p=db.people.find(x=>x.id===editingPid);if(p){p.name=name;p.role=document.getElementById('pf-role').value.trim();p.contact=document.getElementById('pf-contact').value.trim();p.notes=document.getElementById('pf-notes').value.trim();p.status=document.getElementById('pf-status').value.trim();p.hometown=document.getElementById('pf-hometown').value.trim();p.birthday=document.getElementById('pf-birthday').value.trim();p.color=selColor;p.type=selType;p.importance=selImp;}}
-    else { const maxOrder=db.people.reduce((m,x)=>Math.max(m,x.order||0),0); db.people.push({id:uid(),name,role:document.getElementById('pf-role').value.trim(),contact:document.getElementById('pf-contact').value.trim(),notes:document.getElementById('pf-notes').value.trim(),status:document.getElementById('pf-status').value.trim(),hometown:document.getElementById('pf-hometown').value.trim(),birthday:document.getElementById('pf-birthday').value.trim(),color:selColor,type:selType,importance:selImp,facts:[],tags:[],bio:'',groupId:null,order:maxOrder+1}); }
+    if(editingPid){const p=db.people.find(x=>x.id===editingPid);if(p){p.name=name;p.role=document.getElementById('pf-role').value.trim();p.contact=document.getElementById('pf-contact').value.trim();p.bio=document.getElementById('pf-bio').value.trim();p.status=document.getElementById('pf-status').value.trim();p.hometown=document.getElementById('pf-hometown').value.trim();p.birthday=document.getElementById('pf-birthday').value.trim();p.color=selColor;p.type=selType;p.importance=selImp;}}
+    else { const maxOrder=db.people.reduce((m,x)=>Math.max(m,x.order||0),0); db.people.push({id:uid(),name,role:document.getElementById('pf-role').value.trim(),contact:document.getElementById('pf-contact').value.trim(),status:document.getElementById('pf-status').value.trim(),hometown:document.getElementById('pf-hometown').value.trim(),birthday:document.getElementById('pf-birthday').value.trim(),color:selColor,type:selType,importance:selImp,facts:[],tags:[],bio:document.getElementById('pf-bio').value.trim(),groupId:null,order:maxOrder+1}); }
     save();closeOv('ov-person');buildPersonTabs();
     if(editingPid&&curPid===editingPid)renderPersonPage(editingPid);
     renderToday();
