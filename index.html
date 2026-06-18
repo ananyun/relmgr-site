@@ -2323,6 +2323,7 @@ function savePerson(){
   try{
     if(editingPid){const p=db.people.find(x=>x.id===editingPid);if(p){p.name=name;p.role=document.getElementById('pf-role').value.trim();p.contact=document.getElementById('pf-contact').value.trim();p.bio=document.getElementById('pf-bio').value.trim();p.status=document.getElementById('pf-status').value.trim();p.hometown=document.getElementById('pf-hometown').value.trim();p.birthday=document.getElementById('pf-birthday').value.trim();p.color=selColor;p.type=selType;p.importance=selImp;}}
     else { const maxOrder=db.people.reduce((m,x)=>Math.max(m,x.order||0),0); db.people.push({id:uid(),name,role:document.getElementById('pf-role').value.trim(),contact:document.getElementById('pf-contact').value.trim(),status:document.getElementById('pf-status').value.trim(),hometown:document.getElementById('pf-hometown').value.trim(),birthday:document.getElementById('pf-birthday').value.trim(),color:selColor,type:selType,importance:selImp,facts:[],tags:[],bio:document.getElementById('pf-bio').value.trim(),groupId:null,order:maxOrder+1}); }
+    checkBirthdayReminders();
     save();closeOv('ov-person');buildPersonTabs();
     if(editingPid&&curPid===editingPid)renderPersonPage(editingPid);
     renderToday();
@@ -2355,10 +2356,45 @@ document.querySelectorAll('.ov').forEach(ov=>{
   ov.addEventListener('click', e=>{ if (e.target === ov && downOnOverlay) closeOv(ov.id); downOnOverlay = false; });
 });
 
+// ── BIRTHDAY REMINDERS (auto-generated todos, 1 week + 1 day before) ──
+function parseBirthdayMonthDay(birthday) {
+  if (!birthday) return null;
+  const m = birthday.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]/);
+  if (!m) return null;
+  const month = parseInt(m[1]), day = parseInt(m[2]);
+  if (month<1||month>12||day<1||day>31) return null;
+  return { month, day };
+}
+function checkBirthdayReminders() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  let changed = false;
+  db.people.forEach(p => {
+    const md = parseBirthdayMonthDay(p.birthday);
+    if (!md) return;
+    let bdayYear = today.getFullYear();
+    let bday = new Date(bdayYear, md.month-1, md.day);
+    if (bday < today) { bdayYear++; bday = new Date(bdayYear, md.month-1, md.day); }
+    const weekBefore = new Date(bday); weekBefore.setDate(weekBefore.getDate()-7);
+    const dayBefore = new Date(bday); dayBefore.setDate(dayBefore.getDate()-1);
+    const weekKey = `bday-week-${p.id}-${bdayYear}`;
+    const dayKey = `bday-day-${p.id}-${bdayYear}`;
+    if (weekBefore >= today && !db.todos.some(t=>t.bdayKey===weekKey)) {
+      db.todos.push({ id:uid(), title:`🎂 ${p.name} 生日还有一周`, dueDate:fmtDate(weekBefore), dueTime:'09:00', personId:p.id, done:false, notes:'', createdDate:todayStr(), bdayKey:weekKey });
+      changed = true;
+    }
+    if (dayBefore >= today && !db.todos.some(t=>t.bdayKey===dayKey)) {
+      db.todos.push({ id:uid(), title:`🎂 明天是${p.name}的生日！`, dueDate:fmtDate(dayBefore), dueTime:'09:00', personId:p.id, done:false, notes:'', createdDate:todayStr(), bdayKey:dayKey });
+      changed = true;
+    }
+  });
+  if (changed) save();
+}
+
 // ── INIT ──────────────────────────────────────────────────
 (async function init() {
   tryApplySetupParam();
   await load();
+  checkBirthdayReminders();
   buildPersonTabs();
   renderSidebarTags();
   renderToday();
