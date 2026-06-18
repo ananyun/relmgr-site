@@ -643,6 +643,7 @@ textarea.fi { resize: vertical; min-height: 68px; }
   </div>
 </div>
 
+<script src="https://unpkg.com/pinyin-pro@3.26.0/dist/index.js"></script>
 <script>
 // ── CONSTANTS ──────────────────────────────────────────────────
 const PALETTE = {
@@ -1307,6 +1308,29 @@ function buildPersonTabs() {
   highlightActiveSidebar();
   applySidebarFilter();
 }
+const pinyinCache = {};
+function getPinyin(text) {
+  if (pinyinCache[text] !== undefined) return pinyinCache[text];
+  let py = '';
+  try { if (window.pinyinPro) py = window.pinyinPro.pinyin(text, { toneType:'none' }).replace(/\s+/g,'').toLowerCase(); } catch(e) {}
+  pinyinCache[text] = py;
+  return py;
+}
+function getPinyinInitials(text) {
+  let initials = '';
+  try { if (window.pinyinPro) initials = window.pinyinPro.pinyin(text, { pattern:'first', toneType:'none' }).replace(/\s+/g,'').toLowerCase(); } catch(e) {}
+  return initials;
+}
+function personNameMatches(name, q) {
+  if (!q) return true;
+  const lower = name.toLowerCase();
+  if (lower.includes(q)) return true;
+  const py = getPinyin(name);
+  if (py && py.includes(q)) return true;
+  const initials = getPinyinInitials(name);
+  if (initials && initials.includes(q)) return true;
+  return false;
+}
 function applySidebarFilter() {
   const input = document.getElementById('sidebar-search');
   if (!input) return;
@@ -1318,7 +1342,8 @@ function applySidebarFilter() {
       if (lastLabel) lastLabel.style.display = labelHasVisible ? '' : 'none';
       lastLabel = el; labelHasVisible = false;
     } else if (el.classList.contains('sb-person-row')) {
-      const match = !q || el.textContent.toLowerCase().includes(q);
+      const name = el.querySelector('span:last-child')?.textContent || el.textContent;
+      const match = personNameMatches(name, q);
       el.style.display = match ? '' : 'none';
       if (match) labelHasVisible = true;
     }
@@ -1329,7 +1354,7 @@ function filterTodaySearch() {
   const q = document.getElementById('today-search').value.trim().toLowerCase();
   const results = document.getElementById('today-search-results');
   if (!q) { results.style.display = 'none'; results.innerHTML = ''; return; }
-  const matches = db.people.filter(p=>p.name.toLowerCase().includes(q));
+  const matches = db.people.filter(p=>personNameMatches(p.name, q));
   results.style.display = 'block';
   if (!matches.length) { results.innerHTML = '<div class="empty-msg">没有匹配的人物</div>'; return; }
   results.innerHTML = matches.map(p=>{
