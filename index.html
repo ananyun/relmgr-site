@@ -14,6 +14,9 @@
   --teal: #1D9E75; --teal-bg: #E1F5EE;
   --coral: #D85A30; --coral-bg: #FAECE7;
   --amber: #BA7517; --amber-bg: #FAEEDA;
+  --blue: #2B7FD8;
+  --orange-s: #F5C28A; --orange-m: #E8923D; --orange-l: #B5650A;
+  --green-s: #A8E0C4; --green-m: #3DBE82; --green-l: #16834F;
   --r: 10px; --r-sm: 6px;
 }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); }
@@ -191,16 +194,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .cal-arr { padding: 4px 10px; font-size: 15px; border: 1px solid var(--border-md); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; }
 .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
 .cal-wday { text-align: center; font-size: 11px; color: var(--text-3); padding: 4px 0; font-weight: 500; }
-.cal-day { background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; min-height: 44px; }
+.cal-day { background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; min-height: 44px; gap: 2px; }
 .cal-day:hover:not(.dim) { border-color: #c5c0f0; background: var(--purple-bg); }
 .cal-day.dim { opacity: .18; pointer-events: none; }
 .cal-day.is-today { border-color: var(--purple); }
-.cal-day.checked { background: var(--teal); border-color: var(--teal); }
-.cal-day.checked:hover { background: #189060; }
 .d-num { font-size: 13px; font-weight: 500; color: var(--text-2); }
 .cal-day.is-today .d-num { color: var(--purple); font-weight: 700; }
-.cal-day.checked .d-num { color: #fff; }
-.d-chk { font-size: 10px; color: rgba(255,255,255,.8); }
+.d-marks { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; max-width: 30px; }
+.d-mark { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
 /* FEED */
 .feed-top { display: flex; justify-content: flex-end; margin-bottom: 14px; }
@@ -444,6 +445,19 @@ textarea.fi { resize: vertical; min-height: 68px; }
         <div class="so" data-v="其他">• 其他</div>
       </div>
     </div>
+    <div class="fg">
+      <div class="flbl">互助情况</div>
+      <div class="seg" id="seg-helpdir">
+        <div class="so" data-v="">无</div>
+        <div class="so" data-v="me">🧡 我帮他</div>
+        <div class="so" data-v="them">💚 他帮我</div>
+      </div>
+      <div class="seg" id="seg-helplevel" style="margin-top:6px;display:none">
+        <div class="so" data-v="small">小</div>
+        <div class="so" data-v="medium">中</div>
+        <div class="so" data-v="large">大</div>
+      </div>
+    </div>
     <div class="fg"><label class="flbl">聊了什么 / 做了什么</label><textarea class="fi" id="log-notes" placeholder="这次互动的内容..."></textarea></div>
     <div class="fg">
       <label class="flbl">了解到的新信息</label>
@@ -652,6 +666,17 @@ const PALETTE = {
   orange: { bg:'#E07028', label:'待跟进' },
   black:  { bg:'#1A1A18', label:'敌对' },
 };
+const HELP_COLORS = {
+  '': 'var(--blue)',
+  'me-small':'var(--orange-s)', 'me-medium':'var(--orange-m)', 'me-large':'var(--orange-l)',
+  'them-small':'var(--green-s)', 'them-medium':'var(--green-m)', 'them-large':'var(--green-l)',
+};
+const HELP_LABELS = {
+  '': '普通打卡',
+  'me-small':'我帮他 · 小', 'me-medium':'我帮他 · 中', 'me-large':'我帮他 · 大',
+  'them-small':'他帮我 · 小', 'them-medium':'他帮我 · 中', 'them-large':'他帮我 · 大',
+};
+function helpColor(helpType) { return HELP_COLORS[helpType||''] || HELP_COLORS['']; }
 const TL = { work:'工作', friend:'玩伴', family:'家人' };
 const TB = { work:'bw', friend:'bf', family:'bfam' };
 const IL = { 1:'⭐⭐⭐ 核心', 2:'⭐⭐ 重要', 3:'⭐ 普通' };
@@ -1608,7 +1633,7 @@ function todayRowH(p,done) {
 function qCheck(e) {
   e.stopPropagation();
   const pid=e.currentTarget.dataset.pid;
-  if (!checkedToday(pid)){db.interactions.push({id:uid(),personId:pid,date:todayStr(),duration:'',method:'',notes:'',learned:''});save();}
+  if (!checkedToday(pid)){db.interactions.push({id:uid(),personId:pid,date:todayStr(),duration:'',method:'',notes:'',learned:'',helpType:''});save();}
   renderToday();
 }
 
@@ -2225,7 +2250,12 @@ function renderCal(pid) {
   const firstWd=new Date(yr,m,1).getDay();const dim=new Date(yr,m+1,0).getDate();const prevD=new Date(yr,m,0).getDate();
   let h=`<div class="cal-nav"><button class="cal-arr" onclick="movMo('${pid}',-1)">‹</button><div class="cal-ttl">${yr}年${m+1}月</div><button class="cal-arr" onclick="movMo('${pid}',1)">›</button></div><div class="cal-grid">${WD.map(w=>`<div class="cal-wday">${w}</div>`).join('')}`;
   for(let i=firstWd-1;i>=0;i--)h+=`<div class="cal-day dim"><div class="d-num">${prevD-i}</div></div>`;
-  for(let d=1;d<=dim;d++){const ds=`${yr}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const chk=intsOnDate(pid,ds).length>0;h+=`<div class="cal-day ${ds===t?'is-today':''} ${chk?'checked':''}" data-pid="${pid}" data-date="${ds}" onclick="clickDay(this)"><div class="d-num">${d}</div>${chk?'<div class="d-chk">✓</div>':''}</div>`;}
+  for(let d=1;d<=dim;d++){
+    const ds=`${yr}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayInts = intsOnDate(pid,ds);
+    const marks = dayInts.map(i=>`<span class="d-mark" style="background:${helpColor(i.helpType)}"></span>`).join('');
+    h+=`<div class="cal-day ${ds===t?'is-today':''}" data-pid="${pid}" data-date="${ds}" onclick="clickDay(this)"><div class="d-num">${d}</div>${marks?`<div class="d-marks">${marks}</div>`:''}</div>`;
+  }
   const tail=(firstWd+dim)%7===0?0:7-(firstWd+dim)%7;for(let i=1;i<=tail;i++)h+=`<div class="cal-day dim"><div class="d-num">${i}</div></div>`;
   el.innerHTML=h+'</div>';
 }
@@ -2233,13 +2263,20 @@ function movMo(pid,dir){const c=pMonths[pid]||new Date();pMonths[pid]=new Date(c
 function clickDay(el){
   const pid=el.dataset.pid,date=el.dataset.date;
   const existing=intsOnDate(pid,date);
-  if(!existing.length){db.interactions.push({id:uid(),personId:pid,date,duration:'',method:'',notes:'',learned:''});save();renderCal(pid);renderPersonPage(pid);if(date===todayStr())renderToday();}
+  if(!existing.length){db.interactions.push({id:uid(),personId:pid,date,duration:'',method:'',notes:'',learned:'',helpType:''});save();renderCal(pid);renderPersonPage(pid);if(date===todayStr())renderToday();}
   else{
     dayPid=pid;dayDate=date;
     const p=db.people.find(x=>x.id===pid);
     document.getElementById('day-ttl').textContent=date+(p?'  —  '+p.name:'');
-    const det=existing.filter(i=>i.notes||i.learned||i.duration||i.method);
-    document.getElementById('day-info').innerHTML=det.length?det.map(i=>`${i.method?`<span class="int-method" style="margin-right:6px">${i.method}</span>`:''}${i.duration?`<span style="color:var(--teal);font-size:12px">⏱ ${i.duration}分钟</span>`:''}${i.notes?`<div style="margin-top:6px">${escHtml(i.notes)}</div>`:''}${i.learned?`<div style="font-size:12px;color:var(--purple);margin-top:5px">📌 ${escHtml(i.learned)}</div>`:''}`).join('<hr style="border:none;border-top:1px solid var(--border);margin:8px 0">'):'<span style="color:var(--text-3)">已打卡，暂无细节</span>';
+    document.getElementById('day-info').innerHTML=existing.map(i=>`
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 4px;cursor:pointer" onclick="closeOv('ov-day');editLogEntry('${i.id}')">
+        <span class="d-mark" style="background:${helpColor(i.helpType)};margin-top:5px"></span>
+        <div style="flex:1">
+          <div style="font-size:12px;color:var(--text-2)">${HELP_LABELS[i.helpType||'']}${i.method?` · ${i.method}`:''}${i.duration?` · ⏱${i.duration}分钟`:''}</div>
+          ${i.notes?`<div style="margin-top:3px">${escHtml(i.notes)}</div>`:''}
+          ${i.learned?`<div style="font-size:12px;color:var(--purple);margin-top:3px">📌 ${escHtml(i.learned)}</div>`:''}
+        </div>
+      </div>`).join('<hr style="border:none;border-top:1px solid var(--border);margin:4px 0">');
     openOv('ov-day');
   }
 }
@@ -2269,6 +2306,21 @@ function convertEntryToFacts(intId) {
 }
 
 // ── LOG INTERACTION ──────────────────────────────────────────────
+let selHelpDir = '', selHelpLevel = 'small';
+function setHelpDir(dir) {
+  selHelpDir = dir;
+  refreshSeg('seg-helpdir', dir);
+  document.getElementById('seg-helplevel').style.display = dir ? 'flex' : 'none';
+  if (dir) refreshSeg('seg-helplevel', selHelpLevel);
+}
+document.getElementById('seg-helpdir').addEventListener('click', e=>{ const o=e.target.closest('.so'); if(!o) return; setHelpDir(o.dataset.v); });
+document.getElementById('seg-helplevel').addEventListener('click', e=>{ const o=e.target.closest('.so'); if(!o) return; selHelpLevel=o.dataset.v; refreshSeg('seg-helplevel',selHelpLevel); });
+function composeHelpType() { return selHelpDir ? `${selHelpDir}-${selHelpLevel}` : ''; }
+function applyHelpType(helpType) {
+  if (helpType) { const [dir,level] = helpType.split('-'); selHelpDir = dir; selHelpLevel = level||'small'; }
+  else { selHelpDir = ''; selHelpLevel = 'small'; }
+  setHelpDir(selHelpDir);
+}
 function openLog(pid,prefillDate){
   logPid=pid; editingLogId=null; const p=db.people.find(x=>x.id===pid);
   document.getElementById('log-ttl').textContent='记录互动'+(p?' — '+p.name:'');
@@ -2276,6 +2328,7 @@ function openLog(pid,prefillDate){
   ['log-dur','log-notes','log-learned','log-followup'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('log-del').style.display='none';
   selMethod='见面';refreshSeg('seg-method',selMethod);
+  applyHelpType('');
   openOv('ov-log');
 }
 function editLogEntry(intId){
@@ -2290,6 +2343,7 @@ function editLogEntry(intId){
   document.getElementById('log-followup').value = '';
   document.getElementById('log-del').style.display='inline-block';
   selMethod = it.method || '见面'; refreshSeg('seg-method',selMethod);
+  applyHelpType(it.helpType||'');
   openOv('ov-log');
 }
 function deleteLogEntry(){
@@ -2303,13 +2357,14 @@ function deleteLogEntry(){
 function saveLog(){
   const date=document.getElementById('log-date').value;const dur=document.getElementById('log-dur').value;
   const notes=document.getElementById('log-notes').value.trim();const learned=document.getElementById('log-learned').value.trim();const followup=document.getElementById('log-followup').value.trim();
+  const helpType = composeHelpType();
   if(editingLogId){
     const it = db.interactions.find(x=>x.id===editingLogId);
-    if(it){ it.date=date; it.duration=dur; it.method=selMethod; it.notes=notes; it.learned=learned; }
+    if(it){ it.date=date; it.duration=dur; it.method=selMethod; it.notes=notes; it.learned=learned; it.helpType=helpType; }
   } else {
-    const bare=db.interactions.findIndex(i=>i.personId===logPid&&i.date===date&&!i.notes&&!i.learned&&!i.duration&&!i.method);
+    const bare=db.interactions.findIndex(i=>i.personId===logPid&&i.date===date&&!i.notes&&!i.learned&&!i.duration&&!i.method&&!i.helpType);
     if(bare>=0)db.interactions.splice(bare,1);
-    db.interactions.push({id:uid(),personId:logPid,date,duration:dur,method:selMethod,notes,learned});
+    db.interactions.push({id:uid(),personId:logPid,date,duration:dur,method:selMethod,notes,learned,helpType});
   }
   if(learned){const p=db.people.find(x=>x.id===logPid);if(p){if(!p.facts)p.facts=[];p.facts.unshift({date,text:learned});}}
   save();closeOv('ov-log');
@@ -2355,7 +2410,8 @@ function deletePerson(){
 function refreshSeg(segId,val){
   document.querySelectorAll(`#${segId} .so`).forEach(o=>{
     const match=o.dataset.v===val;
-    o.className='so'+(match?' sel-'+val.replace(/\s+/g,'')+(segId==='seg-method'?' sel':''):'');
+    const useSel = segId==='seg-method'||segId==='seg-helpdir'||segId==='seg-helplevel';
+    o.className='so'+(match?(useSel?' sel':' sel-'+val.replace(/\s+/g,'')):'');
   });
 }
 document.getElementById('seg-type').addEventListener('click',e=>{const o=e.target.closest('.so');if(!o)return;selType=o.dataset.v;refreshSeg('seg-type',selType);});
