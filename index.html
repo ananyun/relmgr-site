@@ -1054,7 +1054,10 @@ function sortPeopleList(arr) {
     return a.importance-b.importance || a.name.localeCompare(b.name);
   });
 }
-function hasPendingTodo(pid) { return db.todos.some(t=>!t.done&&t.personId===pid); }
+function hasPendingTodo(pid) {
+  const t = todayStr();
+  return db.todos.some(x=>!x.done && x.personId===pid && (!x.dueDate || x.dueDate<=t));
+}
 function effectiveColor(pid) {
   if (hasPendingTodo(pid)) return 'orange';
   const p = db.people.find(x=>x.id===pid);
@@ -1222,7 +1225,7 @@ function saveFollowup(addCal) {
 }
 
 // ── ICS CALENDAR (opens local Outlook / Calendar app) ──────────
-function addToCalendar(todo) {
+async function addToCalendar(todo) {
   const p = db.people.find(x=>x.id===todo.personId);
   const title = (todo.title + (p?' — '+p.name:'')).replace(/[,;\\]/g,' ');
   const desc  = [todo.notes, p?'关联：'+p.name:'', '来自人际关系管理'].filter(Boolean).join('\\n');
@@ -1257,10 +1260,22 @@ function addToCalendar(todo) {
   ].join('\r\n');
 
   const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
+  const filename = title.slice(0,40).replace(/[^一-龥\w]/g,'_') + '.ics';
+
+  // On phones, use the native share sheet so apps like Outlook/Calendar show up as "open with" targets.
+  try {
+    const file = new File([blob], filename, { type:'text/calendar' });
+    if (navigator.canShare && navigator.canShare({ files:[file] })) {
+      await navigator.share({ files:[file], title });
+      return;
+    }
+  } catch(e) {}
+
+  // Fallback (desktop, or share cancelled/unsupported): regular file download.
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
   a.href = url;
-  a.download = title.slice(0,40).replace(/[^一-龥\w]/g,'_') + '.ics';
+  a.download = filename;
   document.body.appendChild(a); a.click();
   setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
 }
